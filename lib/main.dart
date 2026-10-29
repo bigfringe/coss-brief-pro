@@ -96,8 +96,10 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       setState(()=>diagramPath=saved.path);
       await save();
     } catch (error) {
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content:Text('Could not upload diagram: $error')));
+      if(mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content:Text('Could not upload diagram: $error')));
+      }
     }
   }
   void viewDiagram() {
@@ -325,8 +327,10 @@ class _DiagramEditorState extends State<DiagramEditor> {
     final p=await SharedPreferences.getInstance();
     await p.setString('diagram_ink',jsonEncode(strokes.map(
       (stroke)=>stroke.map((pt)=>[pt.dx,pt.dy]).toList()).toList()));
-    if(mounted)ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content:Text('Diagram markings saved')));
+    if(mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content:Text('Diagram markings saved')));
+    }
   }
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const Text('Five-Mile Diagram'),actions:[
