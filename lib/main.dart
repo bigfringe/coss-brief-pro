@@ -125,22 +125,20 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     const SizedBox(height:18),
     Text('Morning everyone, I’m ${(notes[keyFor(0,0)]??'').trim().isEmpty ? '[COSS name not entered]' : notes[keyFor(0,0)]!.trim()}, your COSS today. I’ll run through the arrangements. You can ask questions during the briefing or at the end.'),
     ...List.generate(headings.length,(i){
-      final active=<Widget>[];
+      final active=<String>[];
       for(var j=0;j<options[i].length;j++){
         final k=keyFor(i,j);
         final value=(notes[k]??'').trim();
         if(crossed.contains(k)||value.isEmpty)continue;
-        active.add(Padding(padding:const EdgeInsets.only(top:8),
-          child:Text('${options[i][j]}: $value')));
+        // Preserve the exact saved value; only shorten surrounding wording.
+        active.add('${options[i][j]}: $value');
       }
-      return Padding(padding:const EdgeInsets.only(top:20),child:Column(
+      if(active.isEmpty)return const SizedBox.shrink();
+      return Padding(padding:const EdgeInsets.only(top:16),child:Column(
         crossAxisAlignment:CrossAxisAlignment.start,children:[
           Text('${i+1}. ${headings[i]}',style:Theme.of(context).textTheme.titleLarge),
-          if(active.isEmpty)
-            const Padding(padding:EdgeInsets.only(top:8),child:Text(
-              'No details entered for this section. Check whether it needs completing before briefing.',
-              style:TextStyle(color:Colors.amber))),
-          ...active
+          const SizedBox(height:6),
+          Text(active.join('; ')),
         ]));
     }),
     const SizedBox(height:24),
