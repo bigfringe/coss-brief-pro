@@ -100,7 +100,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       await save();
       if(oldPath!=null && oldPath!=saved.path) {
         final oldFile=File(oldPath);
-        if(await oldFile.exists())await oldFile.delete();
+        if(await oldFile.exists()) {await oldFile.delete();}
       }
     } catch (error) {
       if(mounted) {
@@ -126,10 +126,12 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     await save();
     if(oldPath!=null){
       final file=File(oldPath);
-      if(await file.exists())await file.delete();
+      if(await file.exists()) {await file.delete();}
     }
-    if(mounted)ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content:Text('Five-Mile Diagram removed')));
+    if(mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content:Text('Five-Mile Diagram removed')));
+    }
   }
   void viewDiagram() {
     final path=diagramPath;
