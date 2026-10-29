@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -53,6 +56,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   final Map<String,TextEditingController> controllers = {};
   Future<void> pendingSave = Future<void>.value();
   final Set<String> crossed = {};
+  String? diagramPath;
   bool preview = false;
   bool loaded = false;
   String keyFor(int i,int j) => '$i:$j';
@@ -64,13 +68,14 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
         final data=jsonDecode(saved) as Map<String,dynamic>;
         notes.addAll((data['notes'] as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));
         crossed.addAll((data['crossed'] as List).map((v)=>v.toString()));
+        diagramPath=data['diagramPath'] as String?;
       } catch (_) {}
     }
     for(final entry in notes.entries){controllers[entry.key]=TextEditingController(text:entry.value);}
     if(mounted)setState(()=>loaded=true);
   }
   Future<void> save() {
-    final snapshot=jsonEncode({'notes':notes,'crossed':crossed.toList()});
+    final snapshot=jsonEncode({'notes':notes,'crossed':crossed.toList(),'diagramPath':diagramPath});
     pendingSave=pendingSave.catchError((Object error){debugPrint('Previous save failed: $error');}).then((_) async {
       final p=await SharedPreferences.getInstance();
       final ok=await p.setString('briefing',snapshot);
@@ -78,6 +83,44 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     });
     return pendingSave;
   }
+  Future<void> pickDiagram() async {
+    try {
+      final image=await ImagePicker().pickImage(source:ImageSource.gallery);
+      if(image==null)return;
+      final dir=await getApplicationDocumentsDirectory();
+      final saved=await File(image.path).copy('${dir.path}/five_mile_diagram.jpg');
+      if(!mounted)return;
+      setState(()=>diagramPath=saved.path);
+      await save();
+    } catch (error) {
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content:Text('Could not upload diagram: $error')));
+    }
+  }
+  void viewDiagram() {
+    final path=diagramPath;
+    if(path==null || !File(path).existsSync())return;
+    Navigator.of(context).push(MaterialPageRoute<void>(builder:(context)=>Scaffold(
+      appBar:AppBar(title:const Text('Five-Mile Diagram')),
+      body:InteractiveViewer(minScale:0.5,maxScale:5,
+        child:Center(child:Image.file(File(path),fit:BoxFit.contain))))));
+  }
+  Widget diagramPanel()=>Card(child:Padding(
+    padding:const EdgeInsets.all(12),child:Column(
+      crossAxisAlignment:CrossAxisAlignment.start,children:[
+      const Text('19. Five-Mile Diagrams',style:TextStyle(
+        color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
+      const SizedBox(height:8),
+      OutlinedButton.icon(onPressed:pickDiagram,
+        icon:const Icon(Icons.add_photo_alternate_outlined),
+        label:Text(diagramPath==null?'Upload diagram photo':'Replace diagram photo')),
+      if(diagramPath!=null && File(diagramPath!).existsSync()) ...[
+        const Text('Double-tap the diagram to view full screen. Pinch to zoom.'),
+        GestureDetector(onDoubleTap:viewDiagram,
+          child:Image.file(File(diagramPath!),height:170,width:double.infinity,
+            fit:BoxFit.contain)),
+      ],
+    ])));
   Widget field(int i,int j) {
     final k=keyFor(i,j), label=options[i][j], excluded=crossed.contains(k);
     return Padding(padding:const EdgeInsets.symmetric(vertical:6),child:Row(
@@ -113,8 +156,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       title:Text('${i+1}. ${headings[i]}', style:const TextStyle(color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
       children:[Padding(padding:const EdgeInsets.all(12),child:Column(
         children:List.generate(options[i].length,(j)=>field(i,j))))]))),
-    const Card(child:ListTile(leading:Icon(Icons.map_outlined),title:Text('19. Five-Mile Diagrams',style:TextStyle(color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
-      subtitle:Text('Photo upload and editable annotations planned for a later build.')))
+    diagramPanel()
   ]);
   // Spoken presentation is deterministic and offline: every saved active item
   // appears verbatim, without AI inventing or dropping safety-critical details.
@@ -142,7 +184,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
         ]));
     }),
     const SizedBox(height:24),
-    const Text('Five-mile diagram attachments: planned for a later build.'),
+    diagramPanel(),
     const SizedBox(height:28),
     const Text('Final briefing confirmation',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
     const SizedBox(height:12),
