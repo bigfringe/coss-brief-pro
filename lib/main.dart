@@ -89,18 +89,47 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       final image=await ImagePicker().pickImage(source:ImageSource.gallery);
       if(image==null)return;
       final dir=await getApplicationDocumentsDirectory();
-      final saved=await File(image.path).copy('${dir.path}/five_mile_diagram.jpg');
+      // Unique file names prevent Flutter's image cache showing an old photo.
+      final saved=await File(image.path).copy(
+        '${dir.path}/five_mile_diagram_${DateTime.now().microsecondsSinceEpoch}.jpg');
       final p=await SharedPreferences.getInstance();
       await p.remove('diagram_ink');
       if(!mounted)return;
+      final oldPath=diagramPath;
       setState(()=>diagramPath=saved.path);
       await save();
+      if(oldPath!=null && oldPath!=saved.path) {
+        final oldFile=File(oldPath);
+        if(await oldFile.exists())await oldFile.delete();
+      }
     } catch (error) {
       if(mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content:Text('Could not upload diagram: $error')));
       }
     }
+  }
+  Future<void> removeDiagram() async {
+    if(diagramPath==null)return;
+    final confirmed=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('Remove Five-Mile Diagram?'),
+      content:const Text('This removes the uploaded photo and its pen markings. Other briefing details will be kept.'),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancel')),
+        TextButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Remove Photo')),
+      ]));
+    if(confirmed!=true || !mounted)return;
+    final oldPath=diagramPath;
+    setState(()=>diagramPath=null);
+    final p=await SharedPreferences.getInstance();
+    await p.remove('diagram_ink');
+    await save();
+    if(oldPath!=null){
+      final file=File(oldPath);
+      if(await file.exists())await file.delete();
+    }
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content:Text('Five-Mile Diagram removed')));
   }
   void viewDiagram() {
     final path=diagramPath;
@@ -117,6 +146,8 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       OutlinedButton.icon(onPressed:pickDiagram,
         icon:const Icon(Icons.add_photo_alternate_outlined),
         label:Text(diagramPath==null?'Upload diagram photo':'Replace diagram photo')),
+      if(diagramPath!=null) TextButton.icon(onPressed:removeDiagram,
+        icon:const Icon(Icons.delete_outline),label:const Text('Remove photo')),
       if(diagramPath!=null && File(diagramPath!).existsSync()) ...[
         const Text('Double-tap to open. Choose Pen to mark up, or Zoom to pinch in and out.'),
         GestureDetector(onDoubleTap:viewDiagram,
