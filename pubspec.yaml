@@ -1,7 +1,7 @@
 name: coss_brief_pro
 description: COSS Brief Pro railway briefing prototype (not approved for operational use).
 publish_to: none
-version: 0.1.5+5
+version: 0.1.9+9
 environment:
   sdk: '>=3.4.0 <4.0.0'
 dependencies:
