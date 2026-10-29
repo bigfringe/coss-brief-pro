@@ -45,13 +45,15 @@ class BriefingHome extends StatefulWidget {
   const BriefingHome({super.key});
   @override State<BriefingHome> createState() => _BriefingHomeState();
 }
-class _BriefingHomeState extends State<BriefingHome> {
+class _BriefingHomeState extends State<BriefingHome> with SingleTickerProviderStateMixin {
+  late final AnimationController trainMotion;
+  @override void initState(){super.initState();trainMotion=AnimationController(vsync:this,duration:const Duration(seconds:9))..repeat();load();}
+  @override void dispose(){trainMotion.dispose();super.dispose();}
   final Map<String,String> notes = {};
   final Set<String> crossed = {};
   bool preview = false;
   bool loaded = false;
   String keyFor(int i,int j) => '$i:$j';
-  @override void initState(){super.initState(); load();}
   Future<void> load() async {
     final p=await SharedPreferences.getInstance();
     final saved=p.getString('briefing');
@@ -92,8 +94,12 @@ class _BriefingHomeState extends State<BriefingHome> {
       child:FilledButton.icon(onPressed:(){setState(()=>preview=!preview);save();},
         icon:Icon(preview?Icons.edit:Icons.article),label:Text(preview?'Back to Edit':'ENTER – Written Briefing')))));
   Widget buildEditor()=>ListView(padding:const EdgeInsets.all(12),children:[
-    const Card(child:Padding(padding:EdgeInsets.all(16),child:Text(
-      'BUILD 5 – TEST ONLY. Not an authorised Safe Work Pack or permission to start work. Verify all safety arrangements against current standards.'))),
+    SizedBox(height:138,child:ClipRRect(borderRadius:BorderRadius.circular(16),child:AnimatedBuilder(
+      animation:trainMotion,builder:(context,_)=>CustomPaint(
+        painter:MovingTrainPainter(trainMotion.value),child:const SizedBox.expand())))),
+    const Padding(padding:EdgeInsets.symmetric(vertical:8,horizontal:4),child:Text(
+      'Draft briefing only — verify safety arrangements before work.',
+      style:TextStyle(fontSize:12,color:Colors.amber))),
     ...List.generate(headings.length,(i)=>Card(child:ExpansionTile(
       title:Text('${i+1}. ${headings[i]}', style:const TextStyle(color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
       children:[Padding(padding:const EdgeInsets.all(12),child:Column(
@@ -117,4 +123,39 @@ class _BriefingHomeState extends State<BriefingHome> {
     const SizedBox(height:24),
     const Text('Five-mile diagram attachments: planned for a later build.')
   ]);
+}
+
+
+// Lightweight, offline animated train header; no external image or network needed.
+class MovingTrainPainter extends CustomPainter {
+  MovingTrainPainter(this.progress);
+  final double progress;
+  @override void paint(Canvas canvas, Size size) {
+    final w=size.width,h=size.height;
+    final bg=Paint()..shader=const LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,
+      colors:[Color(0xff07131f),Color(0xff163247),Color(0xff17212a)]).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size,bg);
+    final rail=Paint()..color=const Color(0xff9ba5a7)..strokeWidth=3;
+    for(final y in [h*.79,h*.94]) {canvas.drawLine(Offset(0,y),Offset(w,y),rail);}
+    final sleepers=Paint()..color=const Color(0xff61564a)..strokeWidth=5;
+    for(double x=0;x<w;x+=27){canvas.drawLine(Offset(x,h*.78),Offset(x+9,h*.96),sleepers);}
+    final overhead=Paint()..color=const Color(0xff4a5860)..strokeWidth=1.4;
+    canvas.drawLine(Offset(0,h*.14),Offset(w,h*.14),overhead);
+    for(double x=40;x<w;x+=125){canvas.drawLine(Offset(x,0),Offset(x,h*.17),overhead);}
+    // Travel left to right; full consist passes and loops.
+    final length=w*.86;
+    final x=-length+(w+length)*progress;
+    final y=h*.42;
+    final train=Paint()..color=const Color(0xffe5ae29);
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x,y,length,h*.32),const Radius.circular(7)),train);
+    canvas.drawRect(Rect.fromLTWH(x,y+h*.18,length,h*.07),Paint()..color=const Color(0xff142a42));
+    final window=Paint()..color=const Color(0xff223b50);
+    for(double wx=x+15;wx<x+length-38;wx+=33){canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(wx,y+8,23,h*.105),const Radius.circular(2)),window);}
+    final nose=Path()..moveTo(x+length-24,y)..lineTo(x+length+8,y+15)..lineTo(x+length+8,y+h*.27)..lineTo(x+length-24,y+h*.32)..close();
+    canvas.drawPath(nose,Paint()..color=const Color(0xfff4c84b));
+    canvas.drawCircle(Offset(x+length+4,y+h*.21),4,Paint()..color=const Color(0xfffff7c5));
+    final wheel=Paint()..color=const Color(0xff111820);
+    for(double wx=x+20;wx<x+length;wx+=66){canvas.drawCircle(Offset(wx,y+h*.34),7,wheel);}
+  }
+  @override bool shouldRepaint(covariant MovingTrainPainter oldDelegate)=>oldDelegate.progress!=progress;
 }
