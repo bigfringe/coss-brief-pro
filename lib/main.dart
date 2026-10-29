@@ -45,10 +45,8 @@ class BriefingHome extends StatefulWidget {
   const BriefingHome({super.key});
   @override State<BriefingHome> createState() => _BriefingHomeState();
 }
-class _BriefingHomeState extends State<BriefingHome> with SingleTickerProviderStateMixin {
-  late final AnimationController trainMotion;
-  @override void initState(){super.initState();trainMotion=AnimationController(vsync:this,duration:const Duration(seconds:9))..repeat(reverse:true);load();}
-  @override void dispose(){trainMotion.dispose();super.dispose();}
+class _BriefingHomeState extends State<BriefingHome> {
+  @override void initState(){super.initState();load();}
   final Map<String,String> notes = {};
   final Set<String> crossed = {};
   bool preview = false;
@@ -94,14 +92,10 @@ class _BriefingHomeState extends State<BriefingHome> with SingleTickerProviderSt
       child:FilledButton.icon(onPressed:(){setState(()=>preview=!preview);save();},
         icon:Icon(preview?Icons.edit:Icons.article),label:Text(preview?'Back to Edit':'ENTER – Written Briefing')))));
   Widget buildEditor()=>ListView(padding:const EdgeInsets.all(12),children:[
-    SizedBox(height:138,child:ClipRRect(borderRadius:BorderRadius.circular(16),child:LayoutBuilder(
-      builder:(context,constraints)=>AnimatedBuilder(
-        animation:trainMotion,builder:(context,_)=>Transform.translate(
-          offset:Offset((0.5-trainMotion.value)*constraints.maxWidth*0.42,0),
-          child:SizedBox(width:constraints.maxWidth*1.42,child:Image.asset(
-            'Screenshot_20261029_151354_com_openai_chatgpt_MainActivity_edit_844638008552952.jpg',
-            fit:BoxFit.cover,alignment:Alignment.center,
-            errorBuilder:(context,error,stackTrace)=>const Center(child:Text('Train image unavailable'))))))))),
+    SizedBox(height:138,child:ClipRRect(borderRadius:BorderRadius.circular(16),child:Image.asset(
+      'Screenshot_20261029_151354_com_openai_chatgpt_MainActivity_edit_844638008552952.jpg',
+      width:double.infinity,fit:BoxFit.cover,alignment:Alignment.center,
+      errorBuilder:(context,error,stackTrace)=>const Center(child:Text('Train image unavailable'))))),
     const Padding(padding:EdgeInsets.symmetric(vertical:8,horizontal:4),child:Text(
       'Draft briefing only — verify safety arrangements before work.',
       style:TextStyle(fontSize:12,color:Colors.amber))),
