@@ -123,7 +123,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     const SizedBox(height:8),
     const Text('Demonstration / draft only. Check all details against the approved briefing and current site arrangements. Not authority to work.',style:TextStyle(color:Colors.amber)),
     const SizedBox(height:18),
-    Text('Hello everyone, my name is ${(notes[keyFor(0,0)]??'').trim().isEmpty ? '[COSS name not entered]' : notes[keyFor(0,0)]!.trim()}, and I will be your COSS for today. I will take you through our safety briefing before we start work. We will cover where we are working, our safe system of work, protection arrangements, site hazards, emergency procedures and the other relevant arrangements. If anything is unclear, please stop me and ask.'),
+    Text('Morning everyone, I’m ${(notes[keyFor(0,0)]??'').trim().isEmpty ? '[COSS name not entered]' : notes[keyFor(0,0)]!.trim()}, your COSS today. I’ll run through the arrangements. You can ask questions during the briefing or at the end.'),
     ...List.generate(headings.length,(i){
       final active=<Widget>[];
       for(var j=0;j<options[i].length;j++){
@@ -148,11 +148,11 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     const SizedBox(height:28),
     const Text('Final briefing confirmation',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
     const SizedBox(height:12),
-    const Text('Right everyone, that brings us to the end of the briefing. Are there any questions about anything we have discussed?'),
+    const Text('That’s the briefing. Any questions, or anything you’d like me to explain again?'),
     const SizedBox(height:12),
-    const Text('Does everybody understand the safe system of work, the protection arrangements, the hazards and what to do in an emergency? If not, please say now so we can go through it again.'),
+    const Text('Does everybody understand the safe system of work, hazards and emergency arrangements? If not, please ask before we start.'),
     const SizedBox(height:12),
-    const Text('Once everybody is happy and understands, can I take your competency cards, please, so I can sign you in?'),
+    const Text('If everyone understands, can I take your competency cards, please, to sign you in?'),
     const SizedBox(height:18),
     const Text('Do not proceed until questions have been answered and everyone has confirmed understanding.',style:TextStyle(color:Colors.amber)),
   ]);
