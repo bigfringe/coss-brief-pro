@@ -45,9 +45,13 @@ class BriefingHome extends StatefulWidget {
   const BriefingHome({super.key});
   @override State<BriefingHome> createState() => _BriefingHomeState();
 }
-class _BriefingHomeState extends State<BriefingHome> {
-  @override void initState(){super.initState();load();}
+class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver {
+  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();}
+  @override void dispose(){WidgetsBinding.instance.removeObserver(this);for(final controller in controllers.values){controller.dispose();}super.dispose();}
+  @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.inactive || state==AppLifecycleState.paused){save();}}
   final Map<String,String> notes = {};
+  final Map<String,TextEditingController> controllers = {};
+  Future<void> pendingSave = Future<void>.value();
   final Set<String> crossed = {};
   bool preview = false;
   bool loaded = false;
@@ -62,11 +66,17 @@ class _BriefingHomeState extends State<BriefingHome> {
         crossed.addAll((data['crossed'] as List).map((v)=>v.toString()));
       } catch (_) {}
     }
+    for(final entry in notes.entries){controllers[entry.key]=TextEditingController(text:entry.value);}
     if(mounted)setState(()=>loaded=true);
   }
-  Future<void> save() async {
-    final p=await SharedPreferences.getInstance();
-    await p.setString('briefing',jsonEncode({'notes':notes,'crossed':crossed.toList()}));
+  Future<void> save() {
+    final snapshot=jsonEncode({'notes':notes,'crossed':crossed.toList()});
+    pendingSave=pendingSave.catchError((Object error){debugPrint('Previous save failed: $error');}).then((_) async {
+      final p=await SharedPreferences.getInstance();
+      final ok=await p.setString('briefing',snapshot);
+      if(!ok) throw StateError('Briefing save failed');
+    });
+    return pendingSave;
   }
   Widget field(int i,int j) {
     final k=keyFor(i,j), label=options[i][j], excluded=crossed.contains(k);
@@ -77,7 +87,7 @@ class _BriefingHomeState extends State<BriefingHome> {
           icon:Icon(excluded?Icons.cancel:Icons.circle_outlined,color:excluded?Colors.redAccent:Colors.amber)),
         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           Text(label,style:TextStyle(decoration:excluded?TextDecoration.lineThrough:null)),
-          if(!excluded) TextFormField(key:ValueKey('field-$k'),initialValue:notes[k]??'',
+          if(!excluded) TextFormField(key:ValueKey('field-$k'),controller:controllers.putIfAbsent(k,()=>TextEditingController(text:notes[k]??'')),
             maxLines:null,decoration:InputDecoration(hintText:label=='Other'?'Enter other details':'Write details alongside this item',isDense:true),
             onChanged:(v){notes[k]=v;save();})
         ]))
