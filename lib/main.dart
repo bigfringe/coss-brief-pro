@@ -136,7 +136,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       if(active.isEmpty)return const SizedBox.shrink();
       return Padding(padding:const EdgeInsets.only(top:16),child:Column(
         crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text('${i+1}. ${headings[i]}',style:Theme.of(context).textTheme.titleLarge),
+          Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),decoration:BoxDecoration(color:const Color(0xFFFFEB3B),borderRadius:BorderRadius.circular(6)),child:Text('${i+1}. ${headings[i]}',style:const TextStyle(color:Colors.black,fontSize:20,fontWeight:FontWeight.w900))),
           const SizedBox(height:6),
           Text(active.join('; ')),
         ]));
