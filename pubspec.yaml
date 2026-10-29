@@ -14,3 +14,5 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 flutter:
   uses-material-design: true
+  assets:
+    - Screenshot_20261029_151354_com_openai_chatgpt_MainActivity_edit_844638008552952.jpg
