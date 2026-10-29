@@ -126,47 +126,95 @@ class _BriefingHomeState extends State<BriefingHome> with SingleTickerProviderSt
 }
 
 
-// Lightweight, offline animated train header; no external image or network needed.
+// Detailed offline passenger train header, travelling left to right.
 class MovingTrainPainter extends CustomPainter {
   MovingTrainPainter(this.progress);
   final double progress;
   @override void paint(Canvas canvas, Size size) {
     final w=size.width,h=size.height;
-    final bg=Paint()..shader=const LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,
-      colors:[Color(0xff07131f),Color(0xff163247),Color(0xff17212a)]).createShader(Offset.zero & size);
-    canvas.drawRect(Offset.zero & size,bg);
-    final rail=Paint()..color=const Color(0xff9ba5a7)..strokeWidth=3;
-    for(final y in [h*.79,h*.94]) {canvas.drawLine(Offset(0,y),Offset(w,y),rail);}
-    final sleepers=Paint()..color=const Color(0xff61564a)..strokeWidth=5;
-    for(double x=0;x<w;x+=27){canvas.drawLine(Offset(x,h*.78),Offset(x+9,h*.96),sleepers);}
-    final overhead=Paint()..color=const Color(0xff4a5860)..strokeWidth=1.4;
-    canvas.drawLine(Offset(0,h*.14),Offset(w,h*.14),overhead);
-    for(double x=40;x<w;x+=125){canvas.drawLine(Offset(x,0),Offset(x,h*.17),overhead);}
-    // Travel left to right; full consist passes and loops.
-    final length=w*.86;
-    final x=-length+(w+length)*progress;
-    final y=h*.42;
-    final train=Paint()..color=const Color(0xffe5ae29);
-    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x,y,length,h*.32),const Radius.circular(7)),train);
-    canvas.drawRect(Rect.fromLTWH(x,y+h*.18,length,h*.07),Paint()..color=const Color(0xff142a42));
-    final window=Paint()..color=const Color(0xff223b50);
-    for(double wx=x+15;wx<x+length-38;wx+=33){canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(wx,y+8,23,h*.105),const Radius.circular(2)),window);}
-    // Friendly conductor visible in the front side window, waving as the train passes.
-    final cabX=x+length-51;
-    final cabY=y+13;
-    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(cabX-5,cabY-5,29,27),const Radius.circular(5)),Paint()..color=const Color(0xff82b6d0));
-    canvas.drawCircle(Offset(cabX+9,cabY+10),6,Paint()..color=const Color(0xffffc28d));
-    canvas.drawRect(Rect.fromLTWH(cabX+3,cabY+16,14,7),Paint()..color=const Color(0xff182b4a));
-    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(cabX+2,cabY+2,15,5),const Radius.circular(2)),Paint()..color=const Color(0xff17243d));
-    final wave=Paint()..color=const Color(0xffffc28d)..strokeWidth=3..strokeCap=StrokeCap.round;
-    final handY=cabY+3+(progress<.5?3.0:0.0);
-    canvas.drawLine(Offset(cabX+17,cabY+19),Offset(cabX+22,handY),wave);
-    canvas.drawCircle(Offset(cabX+22,handY),3,wave);
-    final nose=Path()..moveTo(x+length-24,y)..lineTo(x+length+8,y+15)..lineTo(x+length+8,y+h*.27)..lineTo(x+length-24,y+h*.32)..close();
-    canvas.drawPath(nose,Paint()..color=const Color(0xfff4c84b));
-    canvas.drawCircle(Offset(x+length+4,y+h*.21),4,Paint()..color=const Color(0xfffff7c5));
-    final wheel=Paint()..color=const Color(0xff111820);
-    for(double wx=x+20;wx<x+length;wx+=66){canvas.drawCircle(Offset(wx,y+h*.34),7,wheel);}
+    canvas.drawRect(Offset.zero & size, Paint()..shader=const LinearGradient(
+      begin:Alignment.topCenter,end:Alignment.bottomCenter,
+      colors:[Color(0xff253b4c),Color(0xff7c909b),Color(0xff455760)]).createShader(Offset.zero & size));
+    final ground=Paint()..color=const Color(0xff343b3e);
+    canvas.drawRect(Rect.fromLTWH(0,h*.76,w,h*.24),ground);
+    final ballast=Paint()..color=const Color(0xff646567);
+    canvas.drawRect(Rect.fromLTWH(0,h*.83,w,h*.17),ballast);
+    for(double i=0;i<w;i+=19) {
+      canvas.drawLine(Offset(i,h*.86),Offset(i+12,h*.99),
+        Paint()..color=const Color(0xff514b42)..strokeWidth=5);
+    }
+    for(final y in [h*.84,h*.96]) {
+      canvas.drawLine(Offset(0,y),Offset(w,y),Paint()..color=const Color(0xffd0d1cd)..strokeWidth=3);
+      canvas.drawLine(Offset(0,y+2),Offset(w,y+2),Paint()..color=const Color(0xff343a3d)..strokeWidth=1);
+    }
+    final wire=Paint()..color=const Color(0xff343d43)..strokeWidth=1.1;
+    canvas.drawLine(Offset(0,h*.12),Offset(w,h*.12),wire);
+    for(double px=30;px<w;px+=170) {
+      canvas.drawLine(Offset(px,0),Offset(px,h*.19),wire);
+      canvas.drawLine(Offset(px-18,h*.16),Offset(px+18,h*.16),wire);
+    }
+    // Two articulated passenger coaches with a rounded modern driving cab.
+    final length=w*.98;
+    final x=-length-30+(w+length+60)*progress;
+    final top=h*.34, bodyH=h*.42, bottom=top+bodyH;
+    final body=RRect.fromRectAndRadius(Rect.fromLTWH(x,top,length,bodyH),Radius.circular(h*.055));
+    canvas.drawRRect(body,Paint()..color=const Color(0xffe3e7e7));
+    canvas.drawRRect(body,Paint()..style=PaintingStyle.stroke..strokeWidth=1.2..color=const Color(0xffa7b2b6));
+    canvas.drawRect(Rect.fromLTWH(x+2,top+h*.24,length-10,h*.07),Paint()..color=const Color(0xff174f7b));
+    canvas.drawRect(Rect.fromLTWH(x+2,bottom-h*.055,length-13,h*.032),Paint()..color=const Color(0xff8c999d));
+    // Roof equipment and seams.
+    canvas.drawLine(Offset(x+18,top+3),Offset(x+length-31,top+3),
+      Paint()..color=const Color(0xffa1adb2)..strokeWidth=2);
+    for(final join in [x+length*.31,x+length*.63]) {
+      canvas.drawLine(Offset(join,top+4),Offset(join,bottom-5),
+        Paint()..color=const Color(0xff9ca7ac)..strokeWidth=2);
+      canvas.drawRect(Rect.fromLTWH(join-3,bottom-7,6,6),Paint()..color=const Color(0xff25323a));
+    }
+    // Dark reflective glazing and thin aluminium surrounds.
+    for(double wx=x+15;wx<x+length-68;wx+=37) {
+      final rect=RRect.fromRectAndRadius(Rect.fromLTWH(wx,top+h*.075,27,h*.13),Radius.circular(3));
+      canvas.drawRRect(rect,Paint()..color=const Color(0xff193547));
+      canvas.drawLine(Offset(wx+5,top+h*.085),Offset(wx+12,top+h*.085),
+        Paint()..color=const Color(0xff7c9aab)..strokeWidth=1.3);
+    }
+    // Passenger door pairs.
+    for(final dx in [x+length*.27,x+length*.57]) {
+      canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(dx,top+h*.055,17,h*.31),Radius.circular(2)),
+        Paint()..style=PaintingStyle.stroke..color=const Color(0xff7e8e94)..strokeWidth=1.5);
+      canvas.drawLine(Offset(dx+8.5,top+h*.2),Offset(dx+8.5,bottom-h*.06),
+        Paint()..color=const Color(0xff9ba8ac)..strokeWidth=1);
+    }
+    // Sloping aerodynamic driving end.
+    final nose=Path()..moveTo(x+length-38,top+2)
+      ..quadraticBezierTo(x+length+8,top+12,x+length+10,top+h*.21)
+      ..lineTo(x+length+3,bottom-h*.08)
+      ..quadraticBezierTo(x+length-4,bottom,x+length-38,bottom)
+      ..close();
+    canvas.drawPath(nose,Paint()..color=const Color(0xffe5e9e8));
+    canvas.drawPath(nose,Paint()..style=PaintingStyle.stroke..strokeWidth=1.5..color=const Color(0xff96a5ab));
+    final windscreen=Path()..moveTo(x+length-34,top+h*.055)
+      ..quadraticBezierTo(x+length-2,top+h*.075,x+length+2,top+h*.19)
+      ..lineTo(x+length-34,top+h*.19)..close();
+    canvas.drawPath(windscreen,Paint()..color=const Color(0xff203c4e));
+    canvas.drawLine(Offset(x+length-31,top+h*.067),Offset(x+length-13,top+h*.082),
+      Paint()..color=const Color(0xff66889a)..strokeWidth=1.5);
+    // Driver silhouette behind cab glass; a raised arm gives a small wave.
+    final driverX=x+length-24, driverY=top+h*.125;
+    canvas.drawCircle(Offset(driverX,driverY),h*.026,Paint()..color=const Color(0xffd8ae8a));
+    canvas.drawLine(Offset(driverX+3,driverY+4),Offset(driverX+11,driverY-8),
+      Paint()..color=const Color(0xffd8ae8a)..strokeWidth=2.5..strokeCap=StrokeCap.round);
+    canvas.drawCircle(Offset(driverX+11,driverY-8),2.3,Paint()..color=const Color(0xffd8ae8a));
+    // Cab lights and lower bogies.
+    canvas.drawOval(Rect.fromCenter(center:Offset(x+length+2,top+h*.27),width:7,height:4),
+      Paint()..color=const Color(0xfffff4cc));
+    for(final bx in [x+length*.12,x+length*.41,x+length*.73]) {
+      canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(bx-15,bottom-2,35,7),Radius.circular(2)),
+        Paint()..color=const Color(0xff20272b));
+      for(final ox in [-8.0,12.0]) {
+        canvas.drawCircle(Offset(bx+ox,bottom+4),5,Paint()..color=const Color(0xff171e22));
+        canvas.drawCircle(Offset(bx+ox,bottom+4),2,Paint()..color=const Color(0xff8a9498));
+      }
+    }
   }
   @override bool shouldRepaint(covariant MovingTrainPainter oldDelegate)=>oldDelegate.progress!=progress;
 }
