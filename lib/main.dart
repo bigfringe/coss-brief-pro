@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
@@ -89,6 +90,8 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       if(image==null)return;
       final dir=await getApplicationDocumentsDirectory();
       final saved=await File(image.path).copy('${dir.path}/five_mile_diagram.jpg');
+      final p=await SharedPreferences.getInstance();
+      await p.remove('diagram_ink');
       if(!mounted)return;
       setState(()=>diagramPath=saved.path);
       await save();
@@ -100,10 +103,8 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   void viewDiagram() {
     final path=diagramPath;
     if(path==null || !File(path).existsSync())return;
-    Navigator.of(context).push(MaterialPageRoute<void>(builder:(context)=>Scaffold(
-      appBar:AppBar(title:const Text('Five-Mile Diagram')),
-      body:InteractiveViewer(minScale:0.5,maxScale:5,
-        child:Center(child:Image.file(File(path),fit:BoxFit.contain))))));
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder:(context)=>DiagramEditor(path:path)));
   }
   Widget diagramPanel()=>Card(child:Padding(
     padding:const EdgeInsets.all(12),child:Column(
@@ -115,7 +116,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
         icon:const Icon(Icons.add_photo_alternate_outlined),
         label:Text(diagramPath==null?'Upload diagram photo':'Replace diagram photo')),
       if(diagramPath!=null && File(diagramPath!).existsSync()) ...[
-        const Text('Double-tap the diagram to view full screen. Pinch to zoom.'),
+        const Text('Double-tap to open. Choose Pen to mark up, or Zoom to pinch in and out.'),
         GestureDetector(onDoubleTap:viewDiagram,
           child:Image.file(File(diagramPath!),height:170,width:double.infinity,
             fit:BoxFit.contain)),
@@ -290,4 +291,106 @@ class MovingTrainPainter extends CustomPainter {
     }
   }
   @override bool shouldRepaint(covariant MovingTrainPainter oldDelegate)=>oldDelegate.progress!=progress;
+}
+
+class DiagramEditor extends StatefulWidget {
+  const DiagramEditor({super.key,required this.path});
+  final String path;
+  @override State<DiagramEditor> createState()=>_DiagramEditorState();
+}
+class _DiagramEditorState extends State<DiagramEditor> {
+  bool pen=false;
+  bool loaded=false;
+  ui.Image? image;
+  final List<List<Offset>> strokes=[];
+  List<Offset>? current;
+  @override void initState(){super.initState();load();}
+  Future<void> load() async {
+    final bytes=await File(widget.path).readAsBytes();
+    final codec=await ui.instantiateImageCodec(bytes);
+    final frame=await codec.getNextFrame();
+    final p=await SharedPreferences.getInstance();
+    final saved=p.getString('diagram_ink');
+    if(saved!=null) {
+      try {
+        for(final stroke in jsonDecode(saved) as List) {
+          strokes.add((stroke as List).map((point)=>Offset(
+            (point[0] as num).toDouble(),(point[1] as num).toDouble())).toList());
+        }
+      } catch (_) {strokes.clear();}
+    }
+    if(mounted)setState((){image=frame.image;loaded=true;});
+  }
+  Future<void> saveInk() async {
+    final p=await SharedPreferences.getInstance();
+    await p.setString('diagram_ink',jsonEncode(strokes.map(
+      (stroke)=>stroke.map((pt)=>[pt.dx,pt.dy]).toList()).toList()));
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content:Text('Diagram markings saved')));
+  }
+  @override Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:const Text('Five-Mile Diagram'),actions:[
+      IconButton(tooltip:'Undo last line',onPressed:strokes.isEmpty?null:(){
+        setState(()=>strokes.removeLast());saveInk();
+      },icon:const Icon(Icons.undo)),
+      IconButton(tooltip:'Clear markings',onPressed:strokes.isEmpty?null:()async{
+        final clear=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+          title:const Text('Clear all markings?'),
+          content:const Text('The original diagram photo will be kept.'),
+          actions:[
+            TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancel')),
+            TextButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Clear')),
+          ]));
+        if(clear==true){setState(()=>strokes.clear());await saveInk();}
+      },icon:const Icon(Icons.delete_outline)),
+      IconButton(tooltip:'Save markings',onPressed:saveInk,icon:const Icon(Icons.save)),
+    ]),
+    body:!loaded||image==null?const Center(child:CircularProgressIndicator()):
+      LayoutBuilder(builder:(context,constraints){
+        final img=image!;
+        final width=img.width.toDouble(),height=img.height.toDouble();
+        return InteractiveViewer(
+          minScale:0.3,maxScale:6,panEnabled:!pen,scaleEnabled:!pen,
+          constrained:false,
+          child:SizedBox(width:width,height:height,child:GestureDetector(
+            behavior:HitTestBehavior.opaque,
+            onPanStart:pen?(d)=>setState((){
+              current=[d.localPosition];strokes.add(current!);
+            }):null,
+            onPanUpdate:pen?(d)=>setState(()=>current?.add(d.localPosition)):null,
+            onPanEnd:pen?(d){current=null;saveInk();}:null,
+            child:CustomPaint(painter:DiagramInkPainter(img,strokes),
+              size:Size(width,height)))));}),
+    bottomNavigationBar:SafeArea(child:Padding(padding:const EdgeInsets.all(8),
+      child:Row(children:[
+        Expanded(child:FilledButton.icon(onPressed:()=>setState(()=>pen=true),
+          icon:const Icon(Icons.edit),label:const Text('Pen'),
+          style:FilledButton.styleFrom(backgroundColor:pen?Colors.amber:Colors.grey.shade700))),
+        const SizedBox(width:8),
+        Expanded(child:FilledButton.icon(onPressed:()=>setState(()=>pen=false),
+          icon:const Icon(Icons.zoom_in),label:const Text('Zoom'),
+          style:FilledButton.styleFrom(backgroundColor:!pen?Colors.amber:Colors.grey.shade700))),
+      ]))));
+}
+class DiagramInkPainter extends CustomPainter {
+  DiagramInkPainter(this.photo,this.strokes);
+  final ui.Image photo;
+  final List<List<Offset>> strokes;
+  @override void paint(Canvas canvas,Size size) {
+    canvas.drawImage(photo,Offset.zero,Paint());
+    final paint=Paint()..color=const Color(0xffff2626)
+      ..strokeWidth=5..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round
+      ..style=PaintingStyle.stroke;
+    for(final stroke in strokes){
+      if(stroke.isEmpty)continue;
+      if(stroke.length==1){
+        canvas.drawCircle(stroke.first,2.5,Paint()..color=const Color(0xffff2626));
+      }else{
+        final path=Path()..moveTo(stroke.first.dx,stroke.first.dy);
+        for(final pt in stroke.skip(1)){path.lineTo(pt.dx,pt.dy);}
+        canvas.drawPath(path,paint);
+      }
+    }
+  }
+  @override bool shouldRepaint(covariant DiagramInkPainter old)=>true;
 }
