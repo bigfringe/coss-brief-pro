@@ -123,7 +123,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     const SizedBox(height:8),
     const Text('Demonstration / draft only. Check all details against the approved briefing and current site arrangements. Not authority to work.',style:TextStyle(color:Colors.amber)),
     const SizedBox(height:18),
-    const Text('Right everyone, I am going to take you through our safety briefing. Please listen carefully, and stop me at any point if something is unclear.'),
+    Text('Hello everyone, my name is ${(notes[keyFor(0,0)]??'').trim().isEmpty ? '[COSS name not entered]' : notes[keyFor(0,0)]!.trim()}, and I will be your COSS for today. I will take you through our safety briefing before we start work. We will cover where we are working, our safe system of work, protection arrangements, site hazards, emergency procedures and the other relevant arrangements. If anything is unclear, please stop me and ask.'),
     ...List.generate(headings.length,(i){
       final active=<Widget>[];
       for(var j=0;j<options[i].length;j++){
