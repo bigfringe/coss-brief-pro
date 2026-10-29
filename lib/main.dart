@@ -116,21 +116,45 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     const Card(child:ListTile(leading:Icon(Icons.map_outlined),title:Text('19. Five-Mile Diagrams',style:TextStyle(color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
       subtitle:Text('Photo upload and editable annotations planned for a later build.')))
   ]);
+  // Spoken presentation is deterministic and offline: every saved active item
+  // appears verbatim, without AI inventing or dropping safety-critical details.
   Widget buildPreview()=>ListView(padding:const EdgeInsets.all(16),children:[
     const Text('COSS SAFETY BRIEFING – DRAFT',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
     const SizedBox(height:8),
-    const Text('Demonstration / draft only. Do not use as authority to work.',style:TextStyle(color:Colors.amber)),
-    ...List.generate(headings.length,(i)=>Padding(padding:const EdgeInsets.only(top:20),child:Column(
-      crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Text('${i+1}. ${headings[i]}',style:Theme.of(context).textTheme.titleLarge),
-        ...List.generate(options[i].length,(j){
-          final k=keyFor(i,j);
-          if(crossed.contains(k)||((notes[k]??'').trim().isEmpty))return const SizedBox.shrink();
-          return Padding(padding:const EdgeInsets.only(top:8),child:Text('${options[i][j]}: ${notes[k]}'));
-        })
-      ]))),
+    const Text('Demonstration / draft only. Check all details against the approved briefing and current site arrangements. Not authority to work.',style:TextStyle(color:Colors.amber)),
+    const SizedBox(height:18),
+    const Text('Right everyone, I am going to take you through our safety briefing. Please listen carefully, and stop me at any point if something is unclear.'),
+    ...List.generate(headings.length,(i){
+      final active=<Widget>[];
+      for(var j=0;j<options[i].length;j++){
+        final k=keyFor(i,j);
+        final value=(notes[k]??'').trim();
+        if(crossed.contains(k)||value.isEmpty)continue;
+        active.add(Padding(padding:const EdgeInsets.only(top:8),
+          child:Text('${options[i][j]}: $value')));
+      }
+      return Padding(padding:const EdgeInsets.only(top:20),child:Column(
+        crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text('${i+1}. ${headings[i]}',style:Theme.of(context).textTheme.titleLarge),
+          if(active.isEmpty)
+            const Padding(padding:EdgeInsets.only(top:8),child:Text(
+              'No details entered for this section. Check whether it needs completing before briefing.',
+              style:TextStyle(color:Colors.amber))),
+          ...active
+        ]));
+    }),
     const SizedBox(height:24),
-    const Text('Five-mile diagram attachments: planned for a later build.')
+    const Text('Five-mile diagram attachments: planned for a later build.'),
+    const SizedBox(height:28),
+    const Text('Final briefing confirmation',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
+    const SizedBox(height:12),
+    const Text('Right everyone, that brings us to the end of the briefing. Are there any questions about anything we have discussed?'),
+    const SizedBox(height:12),
+    const Text('Does everybody understand the safe system of work, the protection arrangements, the hazards and what to do in an emergency? If not, please say now so we can go through it again.'),
+    const SizedBox(height:12),
+    const Text('Once everybody is happy and understands, can I take your competency cards, please, so I can sign you in?'),
+    const SizedBox(height:18),
+    const Text('Do not proceed until questions have been answered and everyone has confirmed understanding.',style:TextStyle(color:Colors.amber)),
   ]);
 }
 
