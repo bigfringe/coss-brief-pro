@@ -151,6 +151,17 @@ class MovingTrainPainter extends CustomPainter {
     canvas.drawRect(Rect.fromLTWH(x,y+h*.18,length,h*.07),Paint()..color=const Color(0xff142a42));
     final window=Paint()..color=const Color(0xff223b50);
     for(double wx=x+15;wx<x+length-38;wx+=33){canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(wx,y+8,23,h*.105),const Radius.circular(2)),window);}
+    // Friendly conductor visible in the front side window, waving as the train passes.
+    final cabX=x+length-51;
+    final cabY=y+13;
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(cabX-5,cabY-5,29,27),const Radius.circular(5)),Paint()..color=const Color(0xff82b6d0));
+    canvas.drawCircle(Offset(cabX+9,cabY+10),6,Paint()..color=const Color(0xffffc28d));
+    canvas.drawRect(Rect.fromLTWH(cabX+3,cabY+16,14,7),Paint()..color=const Color(0xff182b4a));
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(cabX+2,cabY+2,15,5),const Radius.circular(2)),Paint()..color=const Color(0xff17243d));
+    final wave=Paint()..color=const Color(0xffffc28d)..strokeWidth=3..strokeCap=StrokeCap.round;
+    final handY=cabY+3+(progress<.5?3.0:0.0);
+    canvas.drawLine(Offset(cabX+17,cabY+19),Offset(cabX+22,handY),wave);
+    canvas.drawCircle(Offset(cabX+22,handY),3,wave);
     final nose=Path()..moveTo(x+length-24,y)..lineTo(x+length+8,y+15)..lineTo(x+length+8,y+h*.27)..lineTo(x+length-24,y+h*.32)..close();
     canvas.drawPath(nose,Paint()..color=const Color(0xfff4c84b));
     canvas.drawCircle(Offset(x+length+4,y+h*.21),4,Paint()..color=const Color(0xfffff7c5));
