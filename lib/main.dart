@@ -95,10 +95,10 @@ class _BriefingHomeState extends State<BriefingHome> {
     const Card(child:Padding(padding:EdgeInsets.all(16),child:Text(
       'BUILD 1 – TEST ONLY. Not an authorised Safe Work Pack or permission to start work. Verify all safety arrangements against current standards.'))),
     ...List.generate(headings.length,(i)=>Card(child:ExpansionTile(
-      title:Text('${i+1}. ${headings[i]}'),
+      title:Text('${i+1}. ${headings[i]}', style:const TextStyle(color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
       children:[Padding(padding:const EdgeInsets.all(12),child:Column(
         children:List.generate(options[i].length,(j)=>field(i,j))))]))),
-    const Card(child:ListTile(leading:Icon(Icons.map_outlined),title:Text('19. Five-Mile Diagrams'),
+    const Card(child:ListTile(leading:Icon(Icons.map_outlined),title:Text('19. Five-Mile Diagrams',style:TextStyle(color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
       subtitle:Text('Photo upload and editable annotations planned for a later build.')))
   ]);
   Widget buildPreview()=>ListView(padding:const EdgeInsets.all(16),children:[
