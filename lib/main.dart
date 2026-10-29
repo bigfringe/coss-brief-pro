@@ -93,7 +93,7 @@ class _BriefingHomeState extends State<BriefingHome> {
         icon:Icon(preview?Icons.edit:Icons.article),label:Text(preview?'Back to Edit':'ENTER – Written Briefing')))));
   Widget buildEditor()=>ListView(padding:const EdgeInsets.all(12),children:[
     const Card(child:Padding(padding:EdgeInsets.all(16),child:Text(
-      'BUILD 1 – TEST ONLY. Not an authorised Safe Work Pack or permission to start work. Verify all safety arrangements against current standards.'))),
+      'BUILD 5 – TEST ONLY. Not an authorised Safe Work Pack or permission to start work. Verify all safety arrangements against current standards.'))),
     ...List.generate(headings.length,(i)=>Card(child:ExpansionTile(
       title:Text('${i+1}. ${headings[i]}', style:const TextStyle(color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
       children:[Padding(padding:const EdgeInsets.all(12),child:Column(
