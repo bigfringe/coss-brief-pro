@@ -97,7 +97,13 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       if(!mounted)return;
       final oldPath=diagramPath;
       setState(()=>diagramPath=saved.path);
+      imageCache.clear();
+      imageCache.clearLiveImages();
       await save();
+      if(mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content:Text('Diagram photo replaced successfully')));
+      }
       if(oldPath!=null && oldPath!=saved.path) {
         final oldFile=File(oldPath);
         if(await oldFile.exists()) {await oldFile.delete();}
@@ -153,8 +159,8 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       if(diagramPath!=null && File(diagramPath!).existsSync()) ...[
         const Text('Double-tap to open. Choose Pen to mark up, or Zoom to pinch in and out.'),
         GestureDetector(onDoubleTap:viewDiagram,
-          child:Image.file(File(diagramPath!),height:170,width:double.infinity,
-            fit:BoxFit.contain)),
+          child:Image.file(File(diagramPath!),key:ValueKey(diagramPath),
+            height:170,width:double.infinity,fit:BoxFit.contain,gaplessPlayback:false)),
       ],
     ])));
   Widget field(int i,int j) {
