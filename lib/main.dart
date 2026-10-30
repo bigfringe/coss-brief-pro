@@ -96,6 +96,10 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       await p.remove('diagram_ink');
       if(!mounted)return;
       final oldPath=diagramPath;
+      if(oldPath!=null) {
+        await FileImage(File(oldPath)).evict();
+      }
+      if(!mounted)return;
       setState(()=>diagramPath=saved.path);
       imageCache.clear();
       imageCache.clearLiveImages();
