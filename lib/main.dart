@@ -37,6 +37,14 @@ const options = <List<String>>[
   ['Time requested to be clear (HH:MM)','Actual clearance time (HH:MM)','Handback confirmed','COSS sign-off','Other']
 ];
 
+// Common UK track IDs. Additional site-specific IDs can be entered manually.
+const trackIds = <String>[
+  '1100 Up Main','2100 Down Main','1200 Up Slow','2200 Down Slow',
+  '1300 Up Fast','2300 Down Fast','1400 Up Goods','2400 Down Goods',
+  '1500 Up Relief','2500 Down Relief','1600 Up Loop','2600 Down Loop',
+  '1700 Up Sidings','2700 Down Sidings'
+];
+
 class CossApp extends StatelessWidget {
   const CossApp({super.key});
   @override Widget build(BuildContext context) => MaterialApp(
@@ -167,6 +175,35 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
             height:170,width:double.infinity,fit:BoxFit.contain,gaplessPlayback:false)),
       ],
     ])));
+  Widget lineSelector(int j) {
+    final k=keyFor(1,j);
+    final label=options[1][j];
+    final selected=(notes[k]??'').split(',').map((s)=>s.trim()).where((s)=>s.isNotEmpty).toSet();
+    return Card(child:ExpansionTile(
+      title:Text(label,style:const TextStyle(color:Color(0xFFFFEB3B),fontSize:21,fontWeight:FontWeight.w900)),
+      subtitle:Text(selected.isEmpty?'Tap to select track IDs':selected.join(', ')),
+      children:[
+        ...trackIds.map((id)=>CheckboxListTile(
+          title:Text(id),value:selected.contains(id),
+          onChanged:(checked){
+            setState((){
+              if(checked==true){selected.add(id);}else{selected.remove(id);}
+              notes[k]=selected.join(', ');
+            });
+            save();
+          })),
+        Padding(padding:const EdgeInsets.all(12),child:TextFormField(
+          key:ValueKey('extra-$k'),
+          initialValue:selected.where((id)=>!trackIds.contains(id)).join(', '),
+          decoration:const InputDecoration(labelText:'Other track IDs (comma-separated)'),
+          onChanged:(value){
+            final known=selected.where(trackIds.contains).toList();
+            final extra=value.split(',').map((v)=>v.trim()).where((v)=>v.isNotEmpty);
+            setState(()=>notes[k]=[...known,...extra].join(', '));
+            save();
+          }))
+      ]));
+  }
   Widget field(int i,int j) {
     final k=keyFor(i,j), label=options[i][j], excluded=crossed.contains(k);
     return Padding(padding:const EdgeInsets.symmetric(vertical:6),child:Row(
@@ -201,7 +238,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     ...List.generate(headings.length,(i)=>Card(child:ExpansionTile(
       title:Text('${i+1}. ${headings[i]}', style:const TextStyle(color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
       children:[Padding(padding:const EdgeInsets.all(12),child:Column(
-        children:(i==1 ? <int>[0,6,7,1,2,3,4,5] : List<int>.generate(options[i].length,(j)=>j)).map((j)=>field(i,j)).toList()))]))),
+        children:(i==1 ? <int>[0,6,7,1,2,3,4,5] : List<int>.generate(options[i].length,(j)=>j)).map((j)=>(i==1 && (j==6 || j==7))?lineSelector(j):field(i,j)).toList()))]))),
     diagramPanel()
   ]);
   // Spoken presentation is deterministic and offline: every saved active item
