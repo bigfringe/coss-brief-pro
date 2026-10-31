@@ -39,8 +39,8 @@ const options = <List<String>>[
 
 // Common UK track IDs. Additional site-specific IDs can be entered manually.
 const trackIds = <String>[
-  '1100 — Up Main / Up Fast',
-  '1200 — Up Relief / Up Slow',
+  '1100 — Up Main',
+  '1200 — Up Slow',
   '1300 — Up Goods',
   '1400 — Up Single',
   '1500 — Up Loop',
