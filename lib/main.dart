@@ -39,10 +39,32 @@ const options = <List<String>>[
 
 // Common UK track IDs. Additional site-specific IDs can be entered manually.
 const trackIds = <String>[
-  '1100 Up Main','2100 Down Main','1200 Up Slow','2200 Down Slow',
-  '1300 Up Fast','2300 Down Fast','1400 Up Goods','2400 Down Goods',
-  '1500 Up Relief','2500 Down Relief','1600 Up Loop','2600 Down Loop',
-  '1700 Up Sidings','2700 Down Sidings'
+  '1100 — Up Main / Up Fast',
+  '1200 — Up Relief / Up Slow',
+  '1300 — Up Goods',
+  '1400 — Up Single',
+  '1500 — Up Loop',
+  '1600 — Up Terminal / Bay',
+  '1700 — Up Crossover',
+  '1800 — Up Other',
+  '1900 — Up Siding',
+  '2100 — Down Main / Down Fast',
+  '2200 — Down Relief / Down Slow',
+  '2300 — Down Goods',
+  '2400 — Down Single',
+  '2500 — Down Loop',
+  '2600 — Down Terminal / Bay',
+  '2700 — Down Crossover',
+  '2800 — Down Other',
+  '2900 — Down Siding',
+  '3100 — Bi-directional Main / Fast',
+  '3200 — Bi-directional Relief / Slow',
+  '3300 — Bi-directional Goods',
+  '3400 — Bi-directional Single',
+  '3500 — Bi-directional Loop',
+  '3600 — Bi-directional Other',
+  '3700 — Bi-directional Crossover',
+  '3900 — Bi-directional Siding'
 ];
 
 class CossApp extends StatelessWidget {
