@@ -192,7 +192,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
         icon:Icon(preview?Icons.edit:Icons.article),label:Text(preview?'Back to Edit':'ENTER – Written Briefing')))));
   Widget buildEditor()=>ListView(padding:const EdgeInsets.all(12),children:[
     SizedBox(height:138,child:ClipRRect(borderRadius:BorderRadius.circular(16),child:Image.asset(
-      'Screenshot_20261029_151354_com_openai_chatgpt_MainActivity_edit_844638008552952.jpg',
+      'Screenshot_20261031_104232_com_openai_chatgpt_MainActivity_edit_903578487073645.jpg',
       width:double.infinity,fit:BoxFit.cover,alignment:Alignment.center,
       errorBuilder:(context,error,stackTrace)=>const Center(child:Text('Train image unavailable'))))),
     const Padding(padding:EdgeInsets.symmetric(vertical:8,horizontal:4),child:Text(
