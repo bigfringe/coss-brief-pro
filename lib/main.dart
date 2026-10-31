@@ -1,5 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:typed_data';
+import 'package:audioplayers/audioplayers.dart';
 import 'dart:ui' as ui;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -81,8 +84,9 @@ class BriefingHome extends StatefulWidget {
 }
 class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver {
   @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();}
-  @override void dispose(){WidgetsBinding.instance.removeObserver(this);for(final controller in controllers.values){controller.dispose();}super.dispose();}
+  @override void dispose(){WidgetsBinding.instance.removeObserver(this);for(final controller in controllers.values){controller.dispose();}hornPlayer.dispose();super.dispose();}
   @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.inactive || state==AppLifecycleState.paused){save();}}
+  final AudioPlayer hornPlayer = AudioPlayer();
   final Map<String,String> notes = {};
   final Map<String,TextEditingController> controllers = {};
   Future<void> pendingSave = Future<void>.value();
@@ -113,6 +117,48 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       if(!ok) throw StateError('Briefing save failed');
     });
     return pendingSave;
+  }
+  // Short two-tone horn generated locally; no network or external sound file.
+  Future<void> playBriefingHorn() async {
+    try {
+      const sampleRate=22050;
+      const duration=1.45;
+      final samples=(sampleRate*duration).round();
+      final bytes=ByteData(44+samples*2);
+      void ascii(int offset,String value){
+        for(var i=0;i<value.length;i++){bytes.setUint8(offset+i,value.codeUnitAt(i));}
+      }
+      ascii(0,'RIFF');
+      bytes.setUint32(4,36+samples*2,Endian.little);
+      ascii(8,'WAVE');ascii(12,'fmt ');
+      bytes.setUint32(16,16,Endian.little);
+      bytes.setUint16(20,1,Endian.little);
+      bytes.setUint16(22,1,Endian.little);
+      bytes.setUint32(24,sampleRate,Endian.little);
+      bytes.setUint32(28,sampleRate*2,Endian.little);
+      bytes.setUint16(32,2,Endian.little);
+      bytes.setUint16(34,16,Endian.little);
+      ascii(36,'data');
+      bytes.setUint32(40,samples*2,Endian.little);
+      for(var i=0;i<samples;i++){
+        final t=i/sampleRate;
+        final tone=t<0.67?370.0:440.0;
+        final local=t<0.67?t:t-0.67;
+        final segment=t<0.67?0.67:duration-0.67;
+        final envelope=math.min(1.0,local/0.06)*math.min(1.0,(segment-local)/0.10);
+        final wave=math.sin(2*math.pi*t*tone)+
+          0.25*math.sin(2*math.pi*t*tone*2);
+        final value=(wave*envelope*0.52*32767).round().clamp(-32768,32767);
+        bytes.setInt16(44+i*2,value,Endian.little);
+      }
+      final dir=await getTemporaryDirectory();
+      final file=File('${dir.path}/coss_briefing_two_tone.wav');
+      await file.writeAsBytes(bytes.buffer.asUint8List(),flush:true);
+      await hornPlayer.stop();
+      await hornPlayer.play(DeviceFileSource(file.path));
+    } catch(error) {
+      debugPrint('Briefing horn unavailable: $error');
+    }
   }
   Future<void> pickDiagram() async {
     try {
@@ -247,7 +293,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     ]),
     body:!loaded?const Center(child:CircularProgressIndicator()):preview?buildPreview():buildEditor(),
     bottomNavigationBar:SafeArea(child:Padding(padding:const EdgeInsets.all(12),
-      child:FilledButton.icon(onPressed:(){setState(()=>preview=!preview);save();},
+      child:FilledButton.icon(onPressed:(){final opening=!preview;setState(()=>preview=!preview);save();if(opening){playBriefingHorn();}},
         icon:Icon(preview?Icons.edit:Icons.article),label:Text(preview?'Back to Edit':'ENTER – Written Briefing')))));
   Widget buildEditor()=>ListView(padding:const EdgeInsets.all(12),children:[
     SizedBox(height:138,child:ClipRRect(borderRadius:BorderRadius.circular(16),child:Image.asset(
