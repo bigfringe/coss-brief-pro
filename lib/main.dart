@@ -18,7 +18,7 @@ const headings = <String>[
 ];
 const options = <List<String>>[
   ['COSS name','Engineering Supervisor name','ES contact number','PICOP name','PICOP contact number','Other'],
-  ['ELR','Lines at site','Start mileage','Finish mileage','Access Point / Egress Point','Work description','Other','Blocked lines at site','Open lines at site'],
+  ['ELR','Start mileage','Finish mileage','Access Point / Egress Point','Work description','Other','Blocked lines at site','Open lines at site'],
   ['Possession','Line blockage','Other authorised arrangement','Other'],
   ['Protection limits','Reference','Adjacent lines','Other'],
   ['Designated access','Designated egress','Walking route','Crossing point','Other'],
@@ -201,7 +201,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     ...List.generate(headings.length,(i)=>Card(child:ExpansionTile(
       title:Text('${i+1}. ${headings[i]}', style:const TextStyle(color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
       children:[Padding(padding:const EdgeInsets.all(12),child:Column(
-        children:(i==1 ? <int>[0,1,7,8,2,3,4,5,6] : List<int>.generate(options[i].length,(j)=>j)).map((j)=>field(i,j)).toList()))]))),
+        children:(i==1 ? <int>[0,6,7,1,2,3,4,5] : List<int>.generate(options[i].length,(j)=>j)).map((j)=>field(i,j)).toList()))]))),
     diagramPanel()
   ]);
   // Spoken presentation is deterministic and offline: every saved active item
