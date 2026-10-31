@@ -1,7 +1,7 @@
 name: coss_brief_pro
 description: COSS Brief Pro railway briefing prototype (not approved for operational use).
 publish_to: none
-version: 0.1.11+11
+version: 0.1.12+12
 environment:
   sdk: '>=3.4.0 <4.0.0'
 dependencies:
@@ -17,4 +17,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - Screenshot_20261029_151354_com_openai_chatgpt_MainActivity_edit_844638008552952.jpg
+    - Screenshot_20261031_104232_com_openai_chatgpt_MainActivity_edit_903578487073645.jpg
