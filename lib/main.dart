@@ -18,7 +18,7 @@ const headings = <String>[
 ];
 const options = <List<String>>[
   ['COSS name','Engineering Supervisor name','ES contact number','PICOP name','PICOP contact number','Other'],
-  ['ELR','Lines at site','Start mileage','Finish mileage','Access Point / Egress Point','Work description','Other','Blocked lines','Open lines'],
+  ['ELR','Lines at site','Start mileage','Finish mileage','Access Point / Egress Point','Work description','Other','Blocked lines at site','Open lines at site'],
   ['Possession','Line blockage','Other authorised arrangement','Other'],
   ['Protection limits','Reference','Adjacent lines','Other'],
   ['Designated access','Designated egress','Walking route','Crossing point','Other'],
