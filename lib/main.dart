@@ -99,7 +99,6 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   final Set<String> crossed = {};
   List<String?> diagramPaths = <String?>[null, null, null];
   List<BriefQuestion> safetyQuestions = <BriefQuestion>[];
-  final Set<int> revealedSafetyAnswers = <int>{};
   bool preview = false;
   bool loaded = false;
   bool resetting = false;
@@ -387,6 +386,47 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     }
     return questions;
   }
+  void showSafetyAnswer(int index) {
+    final item=safetyQuestions[index];
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      fullscreenDialog:true,
+      builder:(ctx)=>Scaffold(
+        appBar:AppBar(
+          title:const Text('COSS ONLY — ANSWER'),
+          actions:[IconButton(
+            tooltip:'Close answer',
+            onPressed:()=>Navigator.pop(ctx),
+            icon:const Icon(Icons.close),
+          )],
+        ),
+        body:SafeArea(child:Center(child:SingleChildScrollView(
+          padding:const EdgeInsets.all(24),
+          child:ConstrainedBox(
+            constraints:const BoxConstraints(maxWidth:800),
+            child:Column(mainAxisSize:MainAxisSize.min,children:[
+              Text('QUESTION ${index+1}',style:const TextStyle(
+                fontSize:22,fontWeight:FontWeight.w900,color:Color(0xFFFFEB3B))),
+              const SizedBox(height:16),
+              Text(item.question,textAlign:TextAlign.center,
+                style:const TextStyle(fontSize:26,fontWeight:FontWeight.bold)),
+              const SizedBox(height:36),
+              const Text('ANSWER',style:TextStyle(
+                fontSize:24,fontWeight:FontWeight.w900,color:Color(0xFFFFEB3B))),
+              const SizedBox(height:16),
+              Text(item.answer,textAlign:TextAlign.center,
+                style:const TextStyle(fontSize:36,fontWeight:FontWeight.w900,color:Colors.amber)),
+              const SizedBox(height:24),
+              FilledButton.icon(
+                onPressed:()=>Navigator.pop(ctx),
+                icon:const Icon(Icons.arrow_back),
+                label:const Text('BACK TO QUESTIONS'),
+              ),
+            ]),
+          ),
+        ))),
+      ),
+    ));
+  }
   void viewDiagram(int index) {
     final path=diagramPaths[index];
     if(path==null || !File(path).existsSync())return;
@@ -479,13 +519,11 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
           unawaited(playBriefingHorn());
           setState(() {
             safetyQuestions=generateSafetyQuestions();
-            revealedSafetyAnswers.clear();
             preview=true;
           });
         } else {
           setState(() {
             preview=false;
-            revealedSafetyAnswers.clear();
           });
         }
         await save();
@@ -554,13 +592,10 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
         crossAxisAlignment:CrossAxisAlignment.start,children:[
           Text('Question ${i+1}: ${item.question}',style:const TextStyle(fontWeight:FontWeight.bold)),
           TextButton.icon(
-            onPressed:()=>setState(() {
-              if(revealed){revealedSafetyAnswers.remove(i);}else{revealedSafetyAnswers.add(i);}
-            }),
-            icon:Icon(revealed?Icons.visibility_off:Icons.visibility),
-            label:Text(revealed?'Hide COSS answer':'Reveal answer (COSS only)'),
+            onPressed:()=>showSafetyAnswer(i),
+            icon:const Icon(Icons.visibility),
+            label:const Text('REVEAL ANSWER — COSS ONLY'),
           ),
-          if(revealed) Text('Answer: ${item.answer}',style:const TextStyle(color:Colors.amber)),
         ],
       )));
     }),
