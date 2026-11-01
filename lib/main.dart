@@ -562,6 +562,8 @@ class _DiagramEditorState extends State<DiagramEditor> {
   List<Offset>? current;
   final TransformationController transformController=TransformationController();
   double fitScale=1;
+  Size viewportSize=Size.zero;
+  bool initialFitScheduled=false;
 
   @override void initState(){super.initState();load();}
   @override void dispose(){transformController.dispose();super.dispose();}
@@ -585,8 +587,8 @@ class _DiagramEditorState extends State<DiagramEditor> {
 
   void fitDiagram(BoxConstraints constraints, ui.Image img) {
     final width=img.width.toDouble(), height=img.height.toDouble();
-    fitScale=(constraints.maxWidth/width).clamp(0.001, 100.0);
-    fitScale=(constraints.maxHeight/height).clamp(0.001, 100.0).clamp(0.001, fitScale);
+    fitScale=(constraints.maxWidth/width).clamp(0.001, 100.0).toDouble();
+    fitScale=(constraints.maxHeight/height).clamp(0.001, fitScale).toDouble();
     final dx=(constraints.maxWidth-width*fitScale)/2;
     final dy=(constraints.maxHeight-height*fitScale)/2;
     transformController.value=Matrix4.identity()
@@ -627,7 +629,9 @@ class _DiagramEditorState extends State<DiagramEditor> {
         final width=img.width.toDouble(),height=img.height.toDouble();
         // Fit large phone photos to the screen and allow the user to zoom all
         // the way back to this readable full-diagram view after drawing.
-        if(transformController.value == Matrix4.identity()) {
+        viewportSize=Size(constraints.maxWidth,constraints.maxHeight);
+        if(!initialFitScheduled) {
+          initialFitScheduled=true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if(mounted) fitDiagram(constraints,img);
           });
@@ -659,9 +663,8 @@ class _DiagramEditorState extends State<DiagramEditor> {
         const SizedBox(width:8),
         Expanded(child:FilledButton.icon(onPressed:(){
           final img=image;
-          if(img!=null) {
-            final box=context.findRenderObject() as RenderBox?;
-            if(box!=null) fitDiagram(BoxConstraints.tight(box.size),img);
+          if(img!=null && viewportSize.width>0 && viewportSize.height>0) {
+            fitDiagram(BoxConstraints.tight(viewportSize),img);
           }
           setState(()=>pen=false);
         },icon:const Icon(Icons.fit_screen),label:const Text('Fit diagram'))),
