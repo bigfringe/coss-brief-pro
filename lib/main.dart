@@ -241,7 +241,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     try {
       await hornPlayer.stop();
       await hornPlayer.setReleaseMode(ReleaseMode.stop);
-      await hornPlayer.setVolume(1.0);
+      await hornPlayer.setVolume(0.5);
       final audioData = await rootBundle.load('assets/coss_train_horn.wav');
       final audioBytes = audioData.buffer.asUint8List(
         audioData.offsetInBytes,
@@ -250,7 +250,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       final tempDirectory = await getTemporaryDirectory();
       final hornFile = File('${tempDirectory.path}/coss_train_horn.wav');
       await hornFile.writeAsBytes(audioBytes, flush: true);
-      await hornPlayer.play(DeviceFileSource(hornFile.path), volume: 1.0);
+      await hornPlayer.play(DeviceFileSource(hornFile.path), volume: 0.5);
     } catch(error) {
       debugPrint('Briefing horn unavailable: $error');
       if (mounted) {
