@@ -587,7 +587,6 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     const Text('Ask the team these three questions. The COSS can reveal each answer after the team has responded.'),
     ...List<Widget>.generate(safetyQuestions.length,(i){
       final item=safetyQuestions[i];
-      final revealed=revealedSafetyAnswers.contains(i);
       return Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(
         crossAxisAlignment:CrossAxisAlignment.start,children:[
           Text('Question ${i+1}: ${item.question}',style:const TextStyle(fontWeight:FontWeight.bold)),
