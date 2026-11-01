@@ -78,6 +78,12 @@ class CossApp extends StatelessWidget {
       scaffoldBackgroundColor: const Color(0xff13232c), useMaterial3: true),
     home: const BriefingHome());
 }
+class BriefQuestion {
+  const BriefQuestion(this.question, this.answer);
+  final String question;
+  final String answer;
+}
+
 class BriefingHome extends StatefulWidget {
   const BriefingHome({super.key});
   @override State<BriefingHome> createState() => _BriefingHomeState();
@@ -92,6 +98,8 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   Future<void> pendingSave = Future<void>.value();
   final Set<String> crossed = {};
   List<String?> diagramPaths = <String?>[null, null, null];
+  List<BriefQuestion> safetyQuestions = <BriefQuestion>[];
+  final Set<int> revealedSafetyAnswers = <int>{};
   bool preview = false;
   bool loaded = false;
   bool resetting = false;
@@ -337,6 +345,48 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
         SnackBar(content:Text('Diagram ${index + 1} removed')));
     }
   }
+  List<BriefQuestion> generateSafetyQuestions() {
+    final pool=<BriefQuestion>[];
+    // Build questions from safety details actually entered in the briefing.
+    for(var i=2;i<headings.length;i++) {
+      for(var j=0;j<options[i].length;j++) {
+        final key=keyFor(i,j);
+        final value=(notes[key]??'').trim();
+        final label=options[i][j];
+        if(crossed.contains(key) || value.isEmpty || label=='Other') continue;
+        pool.add(BriefQuestion(
+          'According to this briefing, what is recorded for $label?',
+          value,
+        ));
+      }
+    }
+    pool.shuffle();
+    final questions=pool.take(3).toList();
+    // If few details have been entered, fill remaining questions with general
+    // safe-response checks rather than inventing site-specific answers.
+    final fallback=<BriefQuestion>[
+      const BriefQuestion(
+        'What should you do if any part of this briefing is unclear?',
+        'Ask the COSS to explain it and make sure you understand before work starts.',
+      ),
+      const BriefQuestion(
+        'What should you do if the site conditions change or become unsafe?',
+        'Stop and tell the COSS so the arrangements can be reviewed and the team rebriefed.',
+      ),
+      const BriefQuestion(
+        'If an emergency occurs, which arrangements should you follow?',
+        'Follow the emergency arrangements recorded in this briefing and contact the named responsible person.',
+      ),
+      const BriefQuestion(
+        'Before starting work, what should you do if the protection or authority is not clear?',
+        'Do not start. Check with the COSS and wait until the arrangements are confirmed.',
+      ),
+    ]..shuffle();
+    while(questions.length<3 && fallback.isNotEmpty) {
+      questions.add(fallback.removeAt(0));
+    }
+    return questions;
+  }
   void viewDiagram(int index) {
     final path=diagramPaths[index];
     if(path==null || !File(path).existsSync())return;
@@ -425,8 +475,19 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     bottomNavigationBar:SafeArea(child:Padding(padding:const EdgeInsets.all(12),
       child:FilledButton.icon(onPressed:() async {
         final opening = !preview;
-        if (opening) unawaited(playBriefingHorn());
-        setState(() => preview = !preview);
+        if (opening) {
+          unawaited(playBriefingHorn());
+          setState(() {
+            safetyQuestions=generateSafetyQuestions();
+            revealedSafetyAnswers.clear();
+            preview=true;
+          });
+        } else {
+          setState(() {
+            preview=false;
+            revealedSafetyAnswers.clear();
+          });
+        }
         await save();
       },
         icon:Icon(preview?Icons.edit:Icons.article),label:Text(preview?'Back to Edit':'ENTER – Written Briefing')))));
@@ -481,6 +542,28 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     const Text('If everyone understands, can I take your competency cards, please, to sign you in?'),
     const SizedBox(height:18),
     const Text('Do not proceed until questions have been answered and everyone has confirmed understanding.',style:TextStyle(color:Colors.amber)),
+    const SizedBox(height:24),
+    const Text('Random Safety Questions',style:TextStyle(
+      color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
+    const SizedBox(height:8),
+    const Text('Ask the team these three questions. The COSS can reveal each answer after the team has responded.'),
+    ...List<Widget>.generate(safetyQuestions.length,(i){
+      final item=safetyQuestions[i];
+      final revealed=revealedSafetyAnswers.contains(i);
+      return Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(
+        crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text('Question ${i+1}: ${item.question}',style:const TextStyle(fontWeight:FontWeight.bold)),
+          TextButton.icon(
+            onPressed:()=>setState(() {
+              if(revealed){revealedSafetyAnswers.remove(i);}else{revealedSafetyAnswers.add(i);}
+            }),
+            icon:Icon(revealed?Icons.visibility_off:Icons.visibility),
+            label:Text(revealed?'Hide COSS answer':'Reveal answer (COSS only)'),
+          ),
+          if(revealed) Text('Answer: ${item.answer}',style:const TextStyle(color:Colors.amber)),
+        ],
+      )));
+    }),
   ]);
 }
 
