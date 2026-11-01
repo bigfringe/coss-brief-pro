@@ -239,7 +239,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   Future<void> playBriefingHorn() async {
     try {
       await hornPlayer.stop();
-      await hornPlayer.play(const AssetSource(
+      await hornPlayer.play(AssetSource(
         'TRNHorn_Train horn 3 (ID 2847)_BigSoundBank.com (1).wav'));
     } catch(error) {
       debugPrint('Briefing horn unavailable: $error');
