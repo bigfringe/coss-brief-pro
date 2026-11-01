@@ -560,7 +560,12 @@ class _DiagramEditorState extends State<DiagramEditor> {
   ui.Image? image;
   final List<List<Offset>> strokes=[];
   List<Offset>? current;
+  final TransformationController transformController=TransformationController();
+  double fitScale=1;
+
   @override void initState(){super.initState();load();}
+  @override void dispose(){transformController.dispose();super.dispose();}
+
   Future<void> load() async {
     final bytes=await File(widget.path).readAsBytes();
     final codec=await ui.instantiateImageCodec(bytes);
@@ -577,6 +582,18 @@ class _DiagramEditorState extends State<DiagramEditor> {
     }
     if(mounted)setState((){image=frame.image;loaded=true;});
   }
+
+  void fitDiagram(BoxConstraints constraints, ui.Image img) {
+    final width=img.width.toDouble(), height=img.height.toDouble();
+    fitScale=(constraints.maxWidth/width).clamp(0.001, 100.0);
+    fitScale=(constraints.maxHeight/height).clamp(0.001, 100.0).clamp(0.001, fitScale);
+    final dx=(constraints.maxWidth-width*fitScale)/2;
+    final dy=(constraints.maxHeight-height*fitScale)/2;
+    transformController.value=Matrix4.identity()
+      ..translate(dx,dy)
+      ..scale(fitScale);
+  }
+
   Future<void> saveInk() async {
     final p=await SharedPreferences.getInstance();
     await p.setString('diagram_ink',jsonEncode(strokes.map(
@@ -586,6 +603,7 @@ class _DiagramEditorState extends State<DiagramEditor> {
         const SnackBar(content:Text('Diagram markings saved')));
     }
   }
+
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const Text('Five-Mile Diagram'),actions:[
       IconButton(tooltip:'Undo last line',onPressed:strokes.isEmpty?null:(){
@@ -607,9 +625,18 @@ class _DiagramEditorState extends State<DiagramEditor> {
       LayoutBuilder(builder:(context,constraints){
         final img=image!;
         final width=img.width.toDouble(),height=img.height.toDouble();
+        // Fit large phone photos to the screen and allow the user to zoom all
+        // the way back to this readable full-diagram view after drawing.
+        if(transformController.value == Matrix4.identity()) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if(mounted) fitDiagram(constraints,img);
+          });
+        }
         return InteractiveViewer(
-          minScale:0.3,maxScale:6,panEnabled:!pen,scaleEnabled:!pen,
-          constrained:false,
+          transformationController:transformController,
+          minScale:fitScale,maxScale:fitScale*6,
+          panEnabled:!pen,scaleEnabled:!pen,
+          constrained:false,alignment:Alignment.topLeft,
           child:SizedBox(width:width,height:height,child:GestureDetector(
             behavior:HitTestBehavior.opaque,
             onPanStart:pen?(d)=>setState((){
@@ -618,7 +645,8 @@ class _DiagramEditorState extends State<DiagramEditor> {
             onPanUpdate:pen?(d)=>setState(()=>current?.add(d.localPosition)):null,
             onPanEnd:pen?(d){current=null;saveInk();}:null,
             child:CustomPaint(painter:DiagramInkPainter(img,strokes),
-              size:Size(width,height)))));}),
+              size:Size(width,height)))));
+      }),
     bottomNavigationBar:SafeArea(child:Padding(padding:const EdgeInsets.all(8),
       child:Row(children:[
         Expanded(child:FilledButton.icon(onPressed:()=>setState(()=>pen=true),
@@ -628,6 +656,15 @@ class _DiagramEditorState extends State<DiagramEditor> {
         Expanded(child:FilledButton.icon(onPressed:()=>setState(()=>pen=false),
           icon:const Icon(Icons.zoom_in),label:const Text('Zoom'),
           style:FilledButton.styleFrom(backgroundColor:!pen?Colors.amber:Colors.grey.shade700))),
+        const SizedBox(width:8),
+        Expanded(child:FilledButton.icon(onPressed:(){
+          final img=image;
+          if(img!=null) {
+            final box=context.findRenderObject() as RenderBox?;
+            if(box!=null) fitDiagram(BoxConstraints.tight(box.size),img);
+          }
+          setState(()=>pen=false);
+        },icon:const Icon(Icons.fit_screen),label:const Text('Fit diagram'))),
       ]))));
 }
 class DiagramInkPainter extends CustomPainter {
