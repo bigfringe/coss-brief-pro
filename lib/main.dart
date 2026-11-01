@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -84,7 +85,7 @@ class BriefingHome extends StatefulWidget {
 }
 class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver {
   @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();}
-  @override void dispose(){WidgetsBinding.instance.removeObserver(this);for(final controller in controllers.values){controller.dispose();}hornPlayer.dispose();super.dispose();}
+  @override void dispose(){resetHoldTimer?.cancel();WidgetsBinding.instance.removeObserver(this);for(final controller in controllers.values){controller.dispose();}hornPlayer.dispose();super.dispose();}
   @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.inactive || state==AppLifecycleState.paused){save();}}
   final AudioPlayer hornPlayer = AudioPlayer();
   final Map<String,String> notes = {};
@@ -94,7 +95,109 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   String? diagramPath;
   bool preview = false;
   bool loaded = false;
+  bool resetting = false;
+  Timer? resetHoldTimer;
   String keyFor(int i,int j) => '$i:$j';
+
+  void beginResetHold() {
+    if (resetting || resetHoldTimer != null) return;
+    resetHoldTimer = Timer(const Duration(seconds: 5), () {
+      resetHoldTimer = null;
+      if (mounted) unawaited(confirmFullReset());
+    });
+  }
+
+  void cancelResetHold() {
+    resetHoldTimer?.cancel();
+    resetHoldTimer = null;
+  }
+
+  Future<void> confirmFullReset() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset Entire Briefing?'),
+        content: const Text(
+          'Reset the entire COSS briefing? All entered information and diagram markings will be cleared.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('CANCEL')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('YES, RESET EVERYTHING')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => resetting = true);
+    try {
+      await pendingSave.catchError((Object error) {
+        debugPrint('Pending save before reset failed: $error');
+      });
+      final oldPath = diagramPath;
+      final p = await SharedPreferences.getInstance();
+      await p.remove('diagram_ink');
+
+      for (final controller in controllers.values) {
+        controller.dispose();
+      }
+      controllers.clear();
+      notes.clear();
+      crossed.clear();
+
+      if (oldPath != null) {
+        await FileImage(File(oldPath)).evict();
+        final oldFile = File(oldPath);
+        if (await oldFile.exists()) await oldFile.delete();
+      }
+      if (!mounted) return;
+      setState(() {
+        diagramPath = null;
+        preview = false;
+      });
+      await save();
+      if (!mounted) return;
+      setState(() => resetting = false);
+      await playBriefingHorn();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Briefing reset successfully')));
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => resetting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not reset briefing: $error')));
+      }
+    }
+  }
+
+  Widget resetButton({bool compact = false}) => Tooltip(
+    message: 'Hold for 5 seconds to reset the entire briefing',
+    child: Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: (_) => beginResetHold(),
+      onPointerUp: (_) => cancelResetHold(),
+      onPointerCancel: (_) => cancelResetHold(),
+      child: compact
+        ? IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.restart_alt, color: Colors.redAccent))
+        : SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: FilledButton.tonalIcon(
+              onPressed: () {},
+              icon: const Icon(Icons.restart_alt, color: Colors.redAccent),
+              label: const Text('HOLD 5 SECONDS TO RESET BRIEFING'),
+            ),
+          ),
+    ),
+  );
   Future<void> load() async {
     final p=await SharedPreferences.getInstance();
     final saved=p.getString('briefing');
@@ -289,9 +392,10 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   }
   @override Widget build(BuildContext context) => Scaffold(
     appBar:AppBar(title:const Text('COSS Brief Pro'),actions:[
+      resetButton(compact:true),
       IconButton(tooltip:'Save',onPressed:()async{await save();if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Draft saved on this device')));},icon:const Icon(Icons.save_outlined))
     ]),
-    body:!loaded?const Center(child:CircularProgressIndicator()):preview?buildPreview():buildEditor(),
+    body:!loaded?const Center(child:CircularProgressIndicator()):resetting?const Center(child:CircularProgressIndicator()):preview?buildPreview():buildEditor(),
     bottomNavigationBar:SafeArea(child:Padding(padding:const EdgeInsets.all(12),
       child:FilledButton.icon(onPressed:(){final opening=!preview;setState(()=>preview=!preview);save();if(opening){playBriefingHorn();}},
         icon:Icon(preview?Icons.edit:Icons.article),label:Text(preview?'Back to Edit':'ENTER – Written Briefing')))));
@@ -303,6 +407,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     const Padding(padding:EdgeInsets.symmetric(vertical:8,horizontal:4),child:Text(
       'Draft briefing only — verify safety arrangements before work.',
       style:TextStyle(fontSize:12,color:Colors.amber))),
+    Padding(padding:const EdgeInsets.symmetric(vertical:8),child:resetButton()),
     ...List.generate(headings.length,(i)=>Card(child:ExpansionTile(
       title:Text('${i+1}. ${headings[i]}', style:const TextStyle(color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
       children:[Padding(padding:const EdgeInsets.all(12),child:Column(
