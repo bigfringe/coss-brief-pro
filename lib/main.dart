@@ -587,8 +587,9 @@ class _DiagramEditorState extends State<DiagramEditor> {
 
   void fitDiagram(BoxConstraints constraints, ui.Image img) {
     final width=img.width.toDouble(), height=img.height.toDouble();
-    fitScale=(constraints.maxWidth/width).clamp(0.001, 100.0).toDouble();
-    fitScale=(constraints.maxHeight/height).clamp(0.001, fitScale).toDouble();
+    final nextFitScale=(constraints.maxWidth/width).clamp(0.001, 100.0).toDouble();
+    fitScale=(constraints.maxHeight/height).clamp(0.001, nextFitScale).toDouble();
+    if(mounted) setState((){});
     final dx=(constraints.maxWidth-width*fitScale)/2;
     final dy=(constraints.maxHeight-height*fitScale)/2;
     transformController.value=Matrix4.identity()
