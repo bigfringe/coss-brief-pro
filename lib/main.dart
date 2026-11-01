@@ -236,26 +236,26 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     });
     return pendingSave;
   }
-  // Play the user's supplied train horn when opening the written briefing or after reset.
+  // Play the user's supplied rocket sound when opening the written briefing or after reset.
   Future<void> playBriefingHorn() async {
     try {
       await hornPlayer.stop();
       await hornPlayer.setReleaseMode(ReleaseMode.stop);
       await hornPlayer.setVolume(0.5);
-      final audioData = await rootBundle.load('assets/coss_train_horn.wav');
+      final audioData = await rootBundle.load('assets/mixkit-fast-rocket-whoosh-1714.wav');
       final audioBytes = audioData.buffer.asUint8List(
         audioData.offsetInBytes,
         audioData.lengthInBytes,
       );
       final tempDirectory = await getTemporaryDirectory();
-      final hornFile = File('${tempDirectory.path}/coss_train_horn.wav');
-      await hornFile.writeAsBytes(audioBytes, flush: true);
-      await hornPlayer.play(DeviceFileSource(hornFile.path), volume: 0.5);
+      final rocketFile = File('${tempDirectory.path}/mixkit-fast-rocket-whoosh-1714.wav');
+      await rocketFile.writeAsBytes(audioBytes, flush: true);
+      await hornPlayer.play(DeviceFileSource(rocketFile.path), volume: 0.5);
     } catch(error) {
-      debugPrint('Briefing horn unavailable: $error');
+      debugPrint('Rocket sound unavailable: $error');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not play train horn: $error')),
+          SnackBar(content: Text('Could not play rocket sound: $error')),
         );
       }
     }
