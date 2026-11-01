@@ -593,8 +593,8 @@ class _DiagramEditorState extends State<DiagramEditor> {
     final dx=(constraints.maxWidth-width*fitScale)/2;
     final dy=(constraints.maxHeight-height*fitScale)/2;
     transformController.value=Matrix4.identity()
-      ..translateByDouble(dx,dy,0)
-      ..scaleByDouble(fitScale,fitScale,1);
+      ..translateByDouble(dx,dy,0,1)
+      ..scaleByDouble(fitScale,fitScale,1,1);
   }
 
   Future<void> saveInk() async {
