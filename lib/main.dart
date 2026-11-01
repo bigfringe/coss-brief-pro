@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math' as math;
-import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:ui' as ui;
 import 'package:image_picker/image_picker.dart';
@@ -186,14 +184,30 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       child: compact
         ? IconButton(
             onPressed: () {},
-            icon: const Icon(Icons.restart_alt, color: Colors.redAccent))
+            tooltip: 'Reset briefing',
+            icon: Image.asset(
+              'Screenshot_20261101_142524_com_google_android_googlequicksearchbox_GoogleAppActivi_edit_959661593088761.jpg',
+              width: 42,
+              height: 42,
+              fit: BoxFit.contain,
+            ))
         : SizedBox(
             width: double.infinity,
-            height: 50,
-            child: FilledButton.tonalIcon(
+            height: 64,
+            child: FilledButton.tonal(
               onPressed: () {},
-              icon: const Icon(Icons.restart_alt, color: Colors.redAccent),
-              label: const Text('HOLD 5 SECONDS TO RESET BRIEFING'),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('Screenshot_20261101_142524_com_google_android_googlequicksearchbox_GoogleAppActivi_edit_959661593088761.jpg',
+                    width: 56, height: 56, fit: BoxFit.contain),
+                  const SizedBox(width: 12),
+                  const Flexible(
+                    child: Text('HOLD FOR 5 SECONDS TO RESET BRIEFING',
+                      textAlign: TextAlign.center),
+                  ),
+                ],
+              ),
             ),
           ),
     ),
@@ -221,44 +235,12 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     });
     return pendingSave;
   }
-  // Short two-tone horn generated locally; no network or external sound file.
+  // Play the user's supplied train horn when opening the written briefing or after reset.
   Future<void> playBriefingHorn() async {
     try {
-      const sampleRate=22050;
-      const duration=1.45;
-      final samples=(sampleRate*duration).round();
-      final bytes=ByteData(44+samples*2);
-      void ascii(int offset,String value){
-        for(var i=0;i<value.length;i++){bytes.setUint8(offset+i,value.codeUnitAt(i));}
-      }
-      ascii(0,'RIFF');
-      bytes.setUint32(4,36+samples*2,Endian.little);
-      ascii(8,'WAVE');ascii(12,'fmt ');
-      bytes.setUint32(16,16,Endian.little);
-      bytes.setUint16(20,1,Endian.little);
-      bytes.setUint16(22,1,Endian.little);
-      bytes.setUint32(24,sampleRate,Endian.little);
-      bytes.setUint32(28,sampleRate*2,Endian.little);
-      bytes.setUint16(32,2,Endian.little);
-      bytes.setUint16(34,16,Endian.little);
-      ascii(36,'data');
-      bytes.setUint32(40,samples*2,Endian.little);
-      for(var i=0;i<samples;i++){
-        final t=i/sampleRate;
-        final tone=t<0.67?370.0:440.0;
-        final local=t<0.67?t:t-0.67;
-        final segment=t<0.67?0.67:duration-0.67;
-        final envelope=math.min(1.0,local/0.06)*math.min(1.0,(segment-local)/0.10);
-        final wave=math.sin(2*math.pi*t*tone)+
-          0.25*math.sin(2*math.pi*t*tone*2);
-        final value=(wave*envelope*0.52*32767).round().clamp(-32768,32767);
-        bytes.setInt16(44+i*2,value,Endian.little);
-      }
-      final dir=await getTemporaryDirectory();
-      final file=File('${dir.path}/coss_briefing_two_tone.wav');
-      await file.writeAsBytes(bytes.buffer.asUint8List(),flush:true);
       await hornPlayer.stop();
-      await hornPlayer.play(DeviceFileSource(file.path));
+      await hornPlayer.play(const AssetSource(
+        'TRNHorn_Train horn 3 (ID 2847)_BigSoundBank.com (1).wav'));
     } catch(error) {
       debugPrint('Briefing horn unavailable: $error');
     }
