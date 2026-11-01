@@ -17,6 +17,8 @@ jobs:
         run: flutter create --platforms=android --project-name=coss_brief_pro --org=uk.co.cossbriefpro .
       - name: Get dependencies
         run: flutter pub get
+      - name: Generate Android launcher icon
+        run: dart run flutter_launcher_icons
       - name: Remove generated template test
         run: rm -f test/widget_test.dart
       - name: Analyze
