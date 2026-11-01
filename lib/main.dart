@@ -242,7 +242,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       await hornPlayer.stop();
       await hornPlayer.setReleaseMode(ReleaseMode.stop);
       await hornPlayer.setVolume(0.5);
-      final audioData = await rootBundle.load('assets/mixkit-fast-rocket-whoosh-1714.wav');
+      final audioData = await rootBundle.load('mixkit-fast-rocket-whoosh-1714.wav');
       final audioBytes = audioData.buffer.asUint8List(
         audioData.offsetInBytes,
         audioData.lengthInBytes,
