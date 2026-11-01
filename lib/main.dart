@@ -239,6 +239,15 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   Future<void> playBriefingHorn() async {
     try {
       await hornPlayer.stop();
+      await hornPlayer.setAudioContext(AudioContext(
+        android: AudioContextAndroid(
+          isSpeakerphoneOn: true,
+          contentType: AndroidContentType.sonification,
+          usageType: AndroidUsageType.media,
+          audioFocus: AndroidAudioFocus.gainTransient,
+        ),
+      ));
+      await hornPlayer.setReleaseMode(ReleaseMode.stop);
       await hornPlayer.setVolume(1.0);
       await hornPlayer.play(
         AssetSource('TRNHorn_Train horn 3 (ID 2847)_BigSoundBank.com (1).wav'),
@@ -397,7 +406,6 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     const Padding(padding:EdgeInsets.symmetric(vertical:8,horizontal:4),child:Text(
       'Draft briefing only — verify safety arrangements before work.',
       style:TextStyle(fontSize:12,color:Colors.amber))),
-    Padding(padding:const EdgeInsets.symmetric(vertical:8),child:resetButton()),
     ...List.generate(headings.length,(i)=>Card(child:ExpansionTile(
       title:Text('${i+1}. ${headings[i]}', style:const TextStyle(color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
       children:[Padding(padding:const EdgeInsets.all(12),child:Column(
