@@ -239,8 +239,11 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   Future<void> playBriefingHorn() async {
     try {
       await hornPlayer.stop();
-      await hornPlayer.play(AssetSource(
-        'TRNHorn_Train horn 3 (ID 2847)_BigSoundBank.com (1).wav'));
+      await hornPlayer.setVolume(1.0);
+      await hornPlayer.play(
+        AssetSource('TRNHorn_Train horn 3 (ID 2847)_BigSoundBank.com (1).wav'),
+        volume: 1.0,
+      );
     } catch(error) {
       debugPrint('Briefing horn unavailable: $error');
     }
@@ -379,7 +382,12 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     ]),
     body:!loaded?const Center(child:CircularProgressIndicator()):resetting?const Center(child:CircularProgressIndicator()):preview?buildPreview():buildEditor(),
     bottomNavigationBar:SafeArea(child:Padding(padding:const EdgeInsets.all(12),
-      child:FilledButton.icon(onPressed:(){final opening=!preview;setState(()=>preview=!preview);save();if(opening){playBriefingHorn();}},
+      child:FilledButton.icon(onPressed:() async {
+        final opening = !preview;
+        setState(() => preview = !preview);
+        await save();
+        if (opening) await playBriefingHorn();
+      },
         icon:Icon(preview?Icons.edit:Icons.article),label:Text(preview?'Back to Edit':'ENTER – Written Briefing')))));
   Widget buildEditor()=>ListView(padding:const EdgeInsets.all(12),children:[
     SizedBox(height:138,child:ClipRRect(borderRadius:BorderRadius.circular(16),child:Image.asset(
