@@ -91,7 +91,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   final Map<String,TextEditingController> controllers = {};
   Future<void> pendingSave = Future<void>.value();
   final Set<String> crossed = {};
-  String? diagramPath;
+  List<String?> diagramPaths = <String?>[null, null, null];
   bool preview = false;
   bool loaded = false;
   bool resetting = false;
@@ -137,8 +137,11 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       await pendingSave.catchError((Object error) {
         debugPrint('Pending save before reset failed: $error');
       });
-      final oldPath = diagramPath;
+      final oldPaths = List<String?>.from(diagramPaths);
       final p = await SharedPreferences.getInstance();
+      for (var i = 0; i < 3; i++) {
+        await p.remove('diagram_ink_${i + 1}');
+      }
       await p.remove('diagram_ink');
 
       for (final controller in controllers.values) {
@@ -148,14 +151,14 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       notes.clear();
       crossed.clear();
 
-      if (oldPath != null) {
+      for (final oldPath in oldPaths.whereType<String>()) {
         await FileImage(File(oldPath)).evict();
         final oldFile = File(oldPath);
         if (await oldFile.exists()) await oldFile.delete();
       }
       if (!mounted) return;
       setState(() {
-        diagramPath = null;
+        diagramPaths = <String?>[null, null, null];
         preview = false;
       });
       await save();
@@ -221,14 +224,29 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
         final data=jsonDecode(saved) as Map<String,dynamic>;
         notes.addAll((data['notes'] as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));
         crossed.addAll((data['crossed'] as List).map((v)=>v.toString()));
-        diagramPath=data['diagramPath'] as String?;
+        diagramPaths = <String?>[null, null, null];
+        final savedPaths = data['diagramPaths'];
+        if (savedPaths is List) {
+          for (var i = 0; i < savedPaths.length && i < 3; i++) {
+            diagramPaths[i] = savedPaths[i] as String?;
+          }
+        } else {
+          // Migrate a briefing saved by an earlier one-diagram version.
+          diagramPaths[0] = data['diagramPath'] as String?;
+        }
       } catch (_) {}
     }
     for(final entry in notes.entries){controllers[entry.key]=TextEditingController(text:entry.value);}
     if(mounted)setState(()=>loaded=true);
   }
   Future<void> save() {
-    final snapshot=jsonEncode({'notes':notes,'crossed':crossed.toList(),'diagramPath':diagramPath});
+    final snapshot=jsonEncode({
+      'notes':notes,
+      'crossed':crossed.toList(),
+      'diagramPaths':diagramPaths,
+      // Keep the first photo available to earlier app versions.
+      'diagramPath':diagramPaths.first,
+    });
     pendingSave=pendingSave.catchError((Object error){debugPrint('Previous save failed: $error');}).then((_) async {
       final p=await SharedPreferences.getInstance();
       final ok=await p.setString('briefing',snapshot);
@@ -260,29 +278,28 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       }
     }
   }
-  Future<void> pickDiagram() async {
+  Future<void> pickDiagram(int index) async {
     try {
       final image=await ImagePicker().pickImage(source:ImageSource.gallery);
       if(image==null)return;
       final dir=await getApplicationDocumentsDirectory();
-      // Unique file names prevent Flutter's image cache showing an old photo.
+      // Unique, numbered files keep each diagram separate and avoid stale image cache entries.
       final saved=await File(image.path).copy(
-        '${dir.path}/five_mile_diagram_${DateTime.now().microsecondsSinceEpoch}.jpg');
+        '${dir.path}/five_mile_diagram_${index + 1}_${DateTime.now().microsecondsSinceEpoch}.jpg');
       final p=await SharedPreferences.getInstance();
-      await p.remove('diagram_ink');
+      await p.remove('diagram_ink_${index + 1}');
+      if(index==0) await p.remove('diagram_ink'); // Remove legacy first-diagram markings.
       if(!mounted)return;
-      final oldPath=diagramPath;
-      if(oldPath!=null) {
-        await FileImage(File(oldPath)).evict();
-      }
+      final oldPath=diagramPaths[index];
+      if(oldPath!=null) await FileImage(File(oldPath)).evict();
       if(!mounted)return;
-      setState(()=>diagramPath=saved.path);
+      setState(()=>diagramPaths[index]=saved.path);
       imageCache.clear();
       imageCache.clearLiveImages();
       await save();
       if(mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content:Text('Diagram photo replaced successfully')));
+          SnackBar(content:Text('Diagram ${index + 1} uploaded successfully')));
       }
       if(oldPath!=null && oldPath!=saved.path) {
         final oldFile=File(oldPath);
@@ -291,24 +308,25 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     } catch (error) {
       if(mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content:Text('Could not upload diagram: $error')));
+          SnackBar(content:Text('Could not upload Diagram ${index + 1}: $error')));
       }
     }
   }
-  Future<void> removeDiagram() async {
-    if(diagramPath==null)return;
+  Future<void> removeDiagram(int index) async {
+    if(diagramPaths[index]==null)return;
     final confirmed=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
-      title:const Text('Remove Five-Mile Diagram?'),
-      content:const Text('This removes the uploaded photo and its pen markings. Other briefing details will be kept.'),
+      title:Text('Remove Diagram ${index + 1}?'),
+      content:const Text('This removes only this diagram and its pen markings. Other diagrams and briefing details will be kept.'),
       actions:[
         TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancel')),
-        TextButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Remove Photo')),
+        TextButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Remove Diagram')),
       ]));
     if(confirmed!=true || !mounted)return;
-    final oldPath=diagramPath;
-    setState(()=>diagramPath=null);
+    final oldPath=diagramPaths[index];
+    setState(()=>diagramPaths[index]=null);
     final p=await SharedPreferences.getInstance();
-    await p.remove('diagram_ink');
+    await p.remove('diagram_ink_${index + 1}');
+    if(index==0) await p.remove('diagram_ink');
     await save();
     if(oldPath!=null){
       final file=File(oldPath);
@@ -316,32 +334,43 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     }
     if(mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content:Text('Five-Mile Diagram removed')));
+        SnackBar(content:Text('Diagram ${index + 1} removed')));
     }
   }
-  void viewDiagram() {
-    final path=diagramPath;
+  void viewDiagram(int index) {
+    final path=diagramPaths[index];
     if(path==null || !File(path).existsSync())return;
     Navigator.of(context).push(MaterialPageRoute<void>(
-      builder:(context)=>DiagramEditor(path:path)));
+      builder:(context)=>DiagramEditor(path:path,index:index)));
+  }
+  Widget diagramSlot(int index) {
+    final path=diagramPaths[index];
+    return Padding(
+      padding:const EdgeInsets.only(top:12),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text('Diagram ${index + 1}',style:const TextStyle(
+          color:Color(0xFFFFEB3B),fontSize:19,fontWeight:FontWeight.bold)),
+        OutlinedButton.icon(onPressed:()=>pickDiagram(index),
+          icon:const Icon(Icons.add_photo_alternate_outlined),
+          label:Text(path==null?'Upload Diagram ${index + 1}':'Replace Diagram ${index + 1}')),
+        if(path!=null) TextButton.icon(onPressed:()=>removeDiagram(index),
+          icon:const Icon(Icons.delete_outline),label:const Text('Remove this diagram')),
+        if(path!=null && File(path).existsSync()) ...[
+          const Text('Double-tap to open. Choose Pen to mark up, or Zoom to pinch in and out.'),
+          GestureDetector(onDoubleTap:()=>viewDiagram(index),
+            child:Image.file(File(path),key:ValueKey(path),
+              height:170,width:double.infinity,fit:BoxFit.contain,gaplessPlayback:false)),
+        ],
+        const Divider(),
+      ]));
   }
   Widget diagramPanel()=>Card(child:Padding(
     padding:const EdgeInsets.all(12),child:Column(
       crossAxisAlignment:CrossAxisAlignment.start,children:[
       const Text('19. Five-Mile Diagrams',style:TextStyle(
         color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
-      const SizedBox(height:8),
-      OutlinedButton.icon(onPressed:pickDiagram,
-        icon:const Icon(Icons.add_photo_alternate_outlined),
-        label:Text(diagramPath==null?'Upload diagram photo':'Replace diagram photo')),
-      if(diagramPath!=null) TextButton.icon(onPressed:removeDiagram,
-        icon:const Icon(Icons.delete_outline),label:const Text('Remove photo')),
-      if(diagramPath!=null && File(diagramPath!).existsSync()) ...[
-        const Text('Double-tap to open. Choose Pen to mark up, or Zoom to pinch in and out.'),
-        GestureDetector(onDoubleTap:viewDiagram,
-          child:Image.file(File(diagramPath!),key:ValueKey(diagramPath),
-            height:170,width:double.infinity,fit:BoxFit.contain,gaplessPlayback:false)),
-      ],
+      const SizedBox(height:4),
+      ...List<Widget>.generate(3, diagramSlot),
     ])));
   Widget lineSelector(int j) {
     final k=keyFor(1,j);
@@ -550,8 +579,9 @@ class MovingTrainPainter extends CustomPainter {
 }
 
 class DiagramEditor extends StatefulWidget {
-  const DiagramEditor({super.key,required this.path});
+  const DiagramEditor({super.key,required this.path,required this.index});
   final String path;
+  final int index;
   @override State<DiagramEditor> createState()=>_DiagramEditorState();
 }
 class _DiagramEditorState extends State<DiagramEditor> {
@@ -573,7 +603,8 @@ class _DiagramEditorState extends State<DiagramEditor> {
     final codec=await ui.instantiateImageCodec(bytes);
     final frame=await codec.getNextFrame();
     final p=await SharedPreferences.getInstance();
-    final saved=p.getString('diagram_ink');
+    final saved=p.getString('diagram_ink_${widget.index + 1}') ??
+        (widget.index==0 ? p.getString('diagram_ink') : null);
     if(saved!=null) {
       try {
         for(final stroke in jsonDecode(saved) as List) {
@@ -599,7 +630,7 @@ class _DiagramEditorState extends State<DiagramEditor> {
 
   Future<void> saveInk() async {
     final p=await SharedPreferences.getInstance();
-    await p.setString('diagram_ink',jsonEncode(strokes.map(
+    await p.setString('diagram_ink_${widget.index + 1}',jsonEncode(strokes.map(
       (stroke)=>stroke.map((pt)=>[pt.dx,pt.dy]).toList()).toList()));
     if(mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -637,7 +668,7 @@ class _DiagramEditorState extends State<DiagramEditor> {
   }
 
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('Five-Mile Diagram'),actions:[
+    appBar:AppBar(title:Text('Diagram ${widget.index + 1}'),actions:[
       IconButton(tooltip:'Diagram instructions',onPressed:showInstructions,
         icon:const Icon(Icons.help_outline)),
       IconButton(tooltip:'Undo last line',onPressed:strokes.isEmpty?null:(){
