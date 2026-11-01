@@ -1,7 +1,7 @@
 name: coss_brief_pro
 description: COSS Brief Pro railway briefing prototype (not approved for operational use).
 publish_to: none
-version: 0.1.16+16
+version: 0.1.17+17
 environment:
   sdk: '>=3.4.0 <4.0.0'
 dependencies:
@@ -20,4 +20,4 @@ flutter:
   assets:
     - Screenshot_20261031_104232_com_openai_chatgpt_MainActivity_edit_903578487073645.jpg
     - Screenshot_20261101_142524_com_google_android_googlequicksearchbox_GoogleAppActivi_edit_959661593088761.jpg
-    - "TRNHorn_Train horn 3 (ID 2847)_BigSoundBank.com (1).wav"
+    - assets/coss_train_horn.wav

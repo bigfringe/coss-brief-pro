@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(const CossApp());
@@ -239,22 +240,24 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   Future<void> playBriefingHorn() async {
     try {
       await hornPlayer.stop();
-      await hornPlayer.setAudioContext(AudioContext(
-        android: AudioContextAndroid(
-          isSpeakerphoneOn: true,
-          contentType: AndroidContentType.sonification,
-          usageType: AndroidUsageType.media,
-          audioFocus: AndroidAudioFocus.gainTransient,
-        ),
-      ));
       await hornPlayer.setReleaseMode(ReleaseMode.stop);
       await hornPlayer.setVolume(1.0);
-      await hornPlayer.play(
-        AssetSource('TRNHorn_Train horn 3 (ID 2847)_BigSoundBank.com (1).wav'),
-        volume: 1.0,
+      final audioData = await rootBundle.load('assets/coss_train_horn.wav');
+      final audioBytes = audioData.buffer.asUint8List(
+        audioData.offsetInBytes,
+        audioData.lengthInBytes,
       );
+      final tempDirectory = await getTemporaryDirectory();
+      final hornFile = File('${tempDirectory.path}/coss_train_horn.wav');
+      await hornFile.writeAsBytes(audioBytes, flush: true);
+      await hornPlayer.play(DeviceFileSource(hornFile.path), volume: 1.0);
     } catch(error) {
       debugPrint('Briefing horn unavailable: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not play train horn: $error')),
+        );
+      }
     }
   }
   Future<void> pickDiagram() async {
@@ -393,9 +396,9 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     bottomNavigationBar:SafeArea(child:Padding(padding:const EdgeInsets.all(12),
       child:FilledButton.icon(onPressed:() async {
         final opening = !preview;
+        if (opening) unawaited(playBriefingHorn());
         setState(() => preview = !preview);
         await save();
-        if (opening) await playBriefingHorn();
       },
         icon:Icon(preview?Icons.edit:Icons.article),label:Text(preview?'Back to Edit':'ENTER – Written Briefing')))));
   Widget buildEditor()=>ListView(padding:const EdgeInsets.all(12),children:[
