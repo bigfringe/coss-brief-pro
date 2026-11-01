@@ -607,8 +607,39 @@ class _DiagramEditorState extends State<DiagramEditor> {
     }
   }
 
+  void showInstructions() {
+    showDialog<void>(
+      context:context,
+      builder:(ctx)=>AlertDialog(
+        title:const Text('Five-Mile Diagram Instructions'),
+        content:const SingleChildScrollView(child:Column(
+          crossAxisAlignment:CrossAxisAlignment.start,
+          mainAxisSize:MainAxisSize.min,
+          children:[
+            Text('1. Tap Upload diagram photo and choose your diagram.'),
+            SizedBox(height:10),
+            Text('2. Double-tap the photo to open it.'),
+            SizedBox(height:10),
+            Text('3. Tap Zoom, then pinch with two fingers to zoom in or out. Drag to move around the diagram.'),
+            SizedBox(height:10),
+            Text('4. Tap Pen and draw on the diagram. Your markings save automatically when you lift your finger.'),
+            SizedBox(height:10),
+            Text('5. Tap Undo to remove the last line. Clear markings erases all pen marks but keeps the original photo.'),
+            SizedBox(height:10),
+            Text('6. Tap Fit diagram to bring the whole diagram back onto the screen.'),
+            SizedBox(height:10),
+            Text('7. Use Save markings to save manually before leaving. Your original photo is kept separate from your markings.'),
+          ],
+        )),
+        actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Close'))],
+      ),
+    );
+  }
+
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const Text('Five-Mile Diagram'),actions:[
+      IconButton(tooltip:'Diagram instructions',onPressed:showInstructions,
+        icon:const Icon(Icons.help_outline)),
       IconButton(tooltip:'Undo last line',onPressed:strokes.isEmpty?null:(){
         setState(()=>strokes.removeLast());saveInk();
       },icon:const Icon(Icons.undo)),
