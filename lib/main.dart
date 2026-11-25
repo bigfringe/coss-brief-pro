@@ -5,6 +5,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'dart:ui' as ui;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+// Keep compatibility with Flutter SDKs predating the Material package split.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
