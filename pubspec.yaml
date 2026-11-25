@@ -19,6 +19,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/think_atlas.gif
     - Screenshot_20261031_104232_com_openai_chatgpt_MainActivity_edit_903578487073645.jpg
     - Screenshot_20261101_142524_com_google_android_googlequicksearchbox_GoogleAppActivi_edit_959661593088761.jpg
     - mixkit-fast-rocket-whoosh-1714.wav
