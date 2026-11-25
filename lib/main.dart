@@ -73,6 +73,7 @@ const trackIds = <String>[
 class CossApp extends StatelessWidget {
   const CossApp({super.key});
   @override Widget build(BuildContext context) => MaterialApp(
+    builder: (context, child) => _LaunchEye(child: child!),
     title: 'COSS Brief Pro', theme: ThemeData(
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xffd8a93b), brightness: Brightness.dark),
       scaffoldBackgroundColor: const Color(0xff13232c), useMaterial3: true),
@@ -872,4 +873,37 @@ class DiagramInkPainter extends CustomPainter {
     }
   }
   @override bool shouldRepaint(covariant DiagramInkPainter old)=>true;
+}
+
+class _LaunchEye extends StatefulWidget {
+  const _LaunchEye({required this.child});
+  final Widget child;
+
+  @override
+  State<_LaunchEye> createState() => _LaunchEyeState();
+}
+
+class _LaunchEyeState extends State<_LaunchEye> {
+  bool opening = true;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(const Duration(seconds: 4), () {
+      if (mounted) setState(() => opening = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(fit: StackFit.expand, children: [
+      ExcludeFocus(excluding: opening, child: widget.child),
+      if (opening)
+        BlockSemantics(child: ColoredBox(
+          color: Colors.black,
+          child: Image.asset('assets/think_atlas.gif',
+              fit: BoxFit.contain, semanticLabel: 'Think Atlas'),
+        )),
+    ]);
+  }
 }
