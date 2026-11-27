@@ -562,13 +562,20 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     }
     if(original.isEmpty)return;
     final source=original.join('\n');
+    final enhancement = const MethodChannel('think_atlas/local_ai')
+        .invokeMethod<String>('enhance', {'text': source})
+        .timeout(const Duration(minutes: 2));
     await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
       title:const Text('Experimental AI wording assistant'),
       content: SizedBox(width:600,child:FutureBuilder<String?>(
-        future:const MethodChannel('think_atlas/local_ai').invokeMethod<String>('enhance',{'text':source}),
+        future:enhancement,
         builder:(context,snapshot){
           if(snapshot.connectionState!=ConnectionState.done)return const Column(mainAxisSize:MainAxisSize.min,children:[CircularProgressIndicator(),Text('Preparing local AI — first use may download the model')]);
-          if(snapshot.hasError || snapshot.data==null)return const Text('Local AI unavailable. Your original briefing is unchanged.');
+          if(snapshot.hasError || snapshot.data==null || snapshot.data!.trim().isEmpty) {
+            return Text(snapshot.error is TimeoutException
+              ? 'Local AI did not respond within two minutes. Return to the original briefing and try again later. The model may still be preparing.'
+              : 'Local AI unavailable on this device. Your original briefing is unchanged.');
+          }
           return SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
             const Text('UNVERIFIED AI DRAFT — NOT AUTHORITY TO WORK',style:TextStyle(color:Colors.amber,fontWeight:FontWeight.bold)),
             SelectableText(snapshot.data!),
