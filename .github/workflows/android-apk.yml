@@ -15,6 +15,11 @@ jobs:
           channel: stable
       - name: Generate Android project
         run: flutter create --platforms=android --project-name=coss_brief_pro --org=uk.co.cossbriefpro .
+      - name: Install native on-device AI bridge
+        run: |
+          cp native_ai/MainActivity.kt android/app/src/main/kotlin/uk/co/cossbriefpro/coss_brief_pro/MainActivity.kt
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = maxOf(26, flutter.minSdkVersion)/' android/app/build.gradle.kts
+          printf '\ndependencies { implementation("com.google.mlkit:genai-prompt:1.0.0-beta4") }\n' >> android/app/build.gradle.kts
       - name: Get dependencies
         run: flutter pub get
       - name: Generate Android launcher icon
