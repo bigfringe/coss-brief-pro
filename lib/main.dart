@@ -88,11 +88,12 @@ class BriefQuestion {
 }
 
 class BriefingHome extends StatefulWidget {
-  const BriefingHome({super.key});
+  const BriefingHome({super.key, this.trainingExample = false});
+  final bool trainingExample;
   @override State<BriefingHome> createState() => _BriefingHomeState();
 }
 class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver {
-  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();}
+  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);if(widget.trainingExample){populateExample();}else{load();}}
   @override void dispose(){resetHoldTimer?.cancel();WidgetsBinding.instance.removeObserver(this);for(final controller in controllers.values){controller.dispose();}hornPlayer.dispose();super.dispose();}
   @override void didChangeAppLifecycleState(AppLifecycleState state){if(loaded && !resetting && (state==AppLifecycleState.inactive || state==AppLifecycleState.paused)){save();}}
   final AudioPlayer hornPlayer = AudioPlayer();
@@ -108,6 +109,78 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   Timer? resetHoldTimer;
   String keyFor(int i,int j) => '$i:$j';
 
+  void openExampleBrief() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => const BriefingHome(trainingExample: true),
+    ));
+  }
+  void populateExample() {
+    notes.addAll(const <String,String>{
+      '0:0': "Training COSS — Alex Example",
+      '0:1': "Training ES — Sam Example",
+      '1:0': "DEMO (fictional ELR)",
+      '1:1': "10 miles 0 yards (fictional)",
+      '1:2': "10 miles 220 yards (fictional)",
+      '1:3': "Training gate A — simulated",
+      '1:4': "Visual inspection exercise only",
+      '2:0': "Simulated possession — no actual protection",
+      '3:0': "Training limits only",
+      '3:1': "DEMO-NOT-VALID",
+      '3:2': "No live line access authorised",
+      '4:0': "Training gate A",
+      '4:1': "Training gate A",
+      '4:2': "Simulated walking route",
+      '5:0': "Discuss moving train risks",
+      '5:1': "Uneven ballast exercise",
+      '5:2': "Clearance awareness",
+      '5:3': "Noise awareness",
+      '5:4': "Visibility awareness",
+      '6:0': "Electrification awareness — status not verified",
+      '7:0': "No actual RRV or plant authorised",
+      '8:0': "High visibility clothing",
+      '8:1': "Safety footwear",
+      '8:2': "Helmet",
+      '8:3': "Gloves",
+      '8:4': "Eye protection",
+      '8:5': "Hearing protection",
+      '9:0': "Simulated wet weather",
+      '10:0': "Training contact only — no real number",
+      '10:1': "Simulated emergency access",
+      '10:2': "Training muster point A",
+      '10:3': "Simulated evacuation route",
+      '11:0': "Training first aider — fictional",
+      '11:1': "Demonstration kit",
+      '11:2': "Hospital to be verified for real work",
+      '11:3': "Training welfare area",
+      '12:0': "Simulated phone communication",
+      '12:1': "Simulated radio",
+      '12:2': "Face-to-face training",
+      '12:3': "Stop exercise if communication fails",
+      '13:0': "Practice briefing only",
+      '13:1': "Practice questions",
+      '13:2': "Understanding to be checked",
+      '14:0': "NOT GRANTED — TRAINING ONLY",
+      '14:1': "No actual authority",
+      '15:0': "Discuss changes",
+      '15:1': "Practice reassessment",
+      '15:2': "Practice rebrief",
+      '15:3': "Stop if unsafe",
+      '16:0': "Not applicable — no machinery authorised",
+      '16:1': "Practice clearance check",
+      '16:2': "Practice headcount",
+      '17:0': "Not applicable — training only",
+      '17:1': "Not recorded",
+      '17:2': "No actual handback",
+      '17:3': "Not signed — training only",
+    });
+    for(var i=0;i<headings.length;i++) {
+      for(var j=0;j<options[i].length;j++) {
+        final k=keyFor(i,j);
+        if(!notes.containsKey(k)) crossed.add(k);
+      }
+    }
+    loaded=true;
+  }
   void beginResetHold() {
     if (resetting || resetHoldTimer != null) return;
     resetHoldTimer = Timer(const Duration(seconds: 5), () {
@@ -252,6 +325,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     if(mounted)setState(()=>loaded=true);
   }
   Future<void> save() {
+    if(widget.trainingExample) return Future<void>.value();
     final snapshot=jsonEncode({
       'notes':notes,
       'crossed':crossed.toList(),
@@ -272,6 +346,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     return pendingSave;
   }
   Future<void> archiveBriefing() async {
+    if(widget.trainingExample) return;
     if(!loaded || resetting) return;
     try {
       await save();
@@ -563,10 +638,12 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       ]));
   }
   @override Widget build(BuildContext context) => Scaffold(
-    appBar:AppBar(title:const Text('COSS Brief Pro'),actions:[
+    appBar:AppBar(title:Text(widget.trainingExample?'TRAINING EXAMPLE':'COSS Brief Pro'),actions:[
+      if(!widget.trainingExample) ...[
       resetButton(compact:true),
       IconButton(tooltip:'Saved Briefings',onPressed:loaded && !resetting?showSavedBriefings:null,icon:const Icon(Icons.folder_open)),
       IconButton(tooltip:'Save Briefing',onPressed:loaded && !resetting?archiveBriefing:null,icon:const Icon(Icons.save_outlined))
+      ]
     ]),
     body:!loaded?const Center(child:CircularProgressIndicator()):resetting?const Center(child:CircularProgressIndicator()):preview?buildPreview():buildEditor(),
     bottomNavigationBar:SafeArea(child:Padding(padding:const EdgeInsets.all(12),
@@ -595,11 +672,12 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     const Padding(padding:EdgeInsets.symmetric(vertical:8,horizontal:4),child:Text(
       'Draft briefing only — verify safety arrangements before work.',
       style:TextStyle(fontSize:12,color:Colors.amber))),
+    if(widget.trainingExample) const Text('TRAINING EXAMPLE — NOT FOR OPERATIONAL USE',style:TextStyle(color:Colors.amber,fontWeight:FontWeight.bold)) else FilledButton.icon(onPressed:openExampleBrief,icon:const Icon(Icons.school),label:const Text('LOAD EXAMPLE BRIEF')),
     ...List.generate(headings.length,(i)=>Card(child:ExpansionTile(
       title:Text('${i+1}. ${headings[i]}', style:const TextStyle(color:Color(0xFFFFEB3B),fontSize:22,fontWeight:FontWeight.w900)),
       children:[Padding(padding:const EdgeInsets.all(12),child:Column(
         children:(i==1 ? <int>[0,6,7,1,2,3,4,5] : List<int>.generate(options[i].length,(j)=>j)).map((j)=>(i==1 && (j==6 || j==7))?lineSelector(j):field(i,j)).toList()))]))),
-    diagramPanel()
+    if(!widget.trainingExample) diagramPanel()
   ]);
   // Spoken presentation is deterministic and offline: every saved active item
   // appears verbatim, without AI inventing or dropping safety-critical details.
@@ -620,7 +698,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
         .invokeMethod<String>('enhance', {'text': source})
         .timeout(const Duration(minutes: 2));
     await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
-      title:const Text('Experimental AI wording assistant'),
+      title:Text(widget.trainingExample?'TRAINING EXAMPLE — AI wording':'Experimental AI wording assistant'),
       content: SizedBox(width:600,child:FutureBuilder<String?>(
         future:enhancement,
         builder:(context,snapshot){
@@ -647,7 +725,8 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     const SizedBox(height:8),
     const Text('Demonstration / draft only. Check all details against the approved briefing and current site arrangements. Not authority to work.',style:TextStyle(color:Colors.amber)),
     const SizedBox(height:12),
-    FilledButton.icon(onPressed:archiveBriefing,icon:const Icon(Icons.save),label:const Text('SAVE BRIEFING')),
+    if(widget.trainingExample) const Text('TRAINING EXAMPLE — NOT FOR OPERATIONAL USE',style:TextStyle(color:Colors.amber,fontWeight:FontWeight.bold)),
+    if(!widget.trainingExample) FilledButton.icon(onPressed:archiveBriefing,icon:const Icon(Icons.save),label:const Text('SAVE BRIEFING')),
     const SizedBox(height:8),
     FilledButton.icon(onPressed:enhanceBriefing,style:FilledButton.styleFrom(backgroundColor:Colors.amber,foregroundColor:Colors.black),icon:const Icon(Icons.auto_awesome),label:const Text('AI ENHANCE BRIEFING — EXPERIMENTAL')),
     const SizedBox(height:18),
@@ -670,7 +749,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
         ]));
     }),
     const SizedBox(height:24),
-    diagramPanel(),
+    if(!widget.trainingExample) diagramPanel(),
     const SizedBox(height:28),
     const Text('Final briefing confirmation',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
     const SizedBox(height:12),
