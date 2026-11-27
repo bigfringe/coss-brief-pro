@@ -94,7 +94,7 @@ class BriefingHome extends StatefulWidget {
 class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver {
   @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();}
   @override void dispose(){resetHoldTimer?.cancel();WidgetsBinding.instance.removeObserver(this);for(final controller in controllers.values){controller.dispose();}hornPlayer.dispose();super.dispose();}
-  @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.inactive || state==AppLifecycleState.paused){save();}}
+  @override void didChangeAppLifecycleState(AppLifecycleState state){if(loaded && !resetting && (state==AppLifecycleState.inactive || state==AppLifecycleState.paused)){save();}}
   final AudioPlayer hornPlayer = AudioPlayer();
   final Map<String,String> notes = {};
   final Map<String,TextEditingController> controllers = {};
@@ -228,7 +228,9 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   );
   Future<void> load() async {
     final p=await SharedPreferences.getInstance();
-    final saved=p.getString('briefing');
+    final dir=await getApplicationDocumentsDirectory();
+    final file=File('${dir.path}/briefing_draft.json');
+    final saved=await file.exists()?await file.readAsString():p.getString('briefing');
     if(saved!=null) {
       try {
         final data=jsonDecode(saved) as Map<String,dynamic>;
@@ -259,10 +261,61 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     });
     pendingSave=pendingSave.catchError((Object error){debugPrint('Previous save failed: $error');}).then((_) async {
       final p=await SharedPreferences.getInstance();
+      final dir=await getApplicationDocumentsDirectory();
+      final file=File('${dir.path}/briefing_draft.json');
+      final temp=File('${file.path}.tmp');
+      await temp.writeAsString(snapshot,flush:true);
+      await temp.rename(file.path);
       final ok=await p.setString('briefing',snapshot);
       if(!ok) throw StateError('Briefing save failed');
     });
     return pendingSave;
+  }
+  Future<void> archiveBriefing() async {
+    if(!loaded || resetting) return;
+    try {
+      await save();
+      final dir=await getApplicationDocumentsDirectory();
+      final folder=Directory('${dir.path}/saved_briefings');
+      await folder.create(recursive:true);
+      final id=DateTime.now().microsecondsSinceEpoch;
+      final paths=<String?>[];
+      final p=await SharedPreferences.getInstance();
+      final ink=<String?>[];
+      for(var i=0;i<diagramPaths.length;i++){
+        final path=diagramPaths[i];
+        paths.add(path==null?null:(await File(path).copy('${folder.path}/${id}_$i.jpg')).path);
+        ink.add(p.getString('diagram_ink_${i+1}') ?? (i==0?p.getString('diagram_ink'):null));
+      }
+      final file=File('${folder.path}/$id.json');
+      final temp=File('${file.path}.tmp');
+      await temp.writeAsString(jsonEncode({'date':DateTime.now().toIso8601String(),'notes':notes,'crossed':crossed.toList(),'diagramPaths':paths,'ink':ink}),flush:true);
+      await temp.rename(file.path);
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Briefing saved on this device')));
+    } catch(error) {
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Save failed: $error')));
+    }
+  }
+  Future<void> showSavedBriefings() async {
+    final dir=await getApplicationDocumentsDirectory();
+    final folder=Directory('${dir.path}/saved_briefings');
+    final files=await folder.exists()?await folder.list().where((f)=>f is File && f.path.endsWith('.json')).cast<File>().toList():<File>[];
+    files.sort((a,b)=>b.path.compareTo(a.path));
+    if(!mounted)return;
+    await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('Saved Briefings'),
+      content:SizedBox(width:500,child:files.isEmpty?const Text('No saved briefings yet'):ListView(shrinkWrap:true,children:files.map((file){
+        final data=jsonDecode(file.readAsStringSync()) as Map<String,dynamic>;
+        final values=data['notes'] as Map;
+        return ListTile(title:Text('${values['1:0']??'Briefing'}'),subtitle:Text('${data['date']}'),onTap:(){
+          Navigator.pop(ctx);
+          showDialog<void>(context:context,builder:(detail)=>AlertDialog(title:const Text('Saved briefing — read only'),content:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            for(var i=0;i<headings.length;i++) for(var j=0;j<options[i].length;j++) if(values[keyFor(i,j)]!=null && !(data['crossed'] as List).contains(keyFor(i,j))) Text('${options[i][j]}: ${values[keyFor(i,j)]}'),
+            for(final path in (data['diagramPaths'] as List).whereType<String>()) if(File(path).existsSync()) Image.file(File(path)),
+          ])),actions:[TextButton(onPressed:()=>Navigator.pop(detail),child:const Text('Close'))]));
+        });
+      }).toList())),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Close'))]));
   }
   // Play the user's supplied rocket sound when opening the written briefing or after reset.
   Future<void> playBriefingHorn() async {
@@ -512,7 +565,8 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   @override Widget build(BuildContext context) => Scaffold(
     appBar:AppBar(title:const Text('COSS Brief Pro'),actions:[
       resetButton(compact:true),
-      IconButton(tooltip:'Save',onPressed:()async{await save();if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Draft saved on this device')));},icon:const Icon(Icons.save_outlined))
+      IconButton(tooltip:'Saved Briefings',onPressed:loaded && !resetting?showSavedBriefings:null,icon:const Icon(Icons.folder_open)),
+      IconButton(tooltip:'Save Briefing',onPressed:loaded && !resetting?archiveBriefing:null,icon:const Icon(Icons.save_outlined))
     ]),
     body:!loaded?const Center(child:CircularProgressIndicator()):resetting?const Center(child:CircularProgressIndicator()):preview?buildPreview():buildEditor(),
     bottomNavigationBar:SafeArea(child:Padding(padding:const EdgeInsets.all(12),
@@ -593,6 +647,8 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     const SizedBox(height:8),
     const Text('Demonstration / draft only. Check all details against the approved briefing and current site arrangements. Not authority to work.',style:TextStyle(color:Colors.amber)),
     const SizedBox(height:12),
+    FilledButton.icon(onPressed:archiveBriefing,icon:const Icon(Icons.save),label:const Text('SAVE BRIEFING')),
+    const SizedBox(height:8),
     FilledButton.icon(onPressed:enhanceBriefing,style:FilledButton.styleFrom(backgroundColor:Colors.amber,foregroundColor:Colors.black),icon:const Icon(Icons.auto_awesome),label:const Text('AI ENHANCE BRIEFING — EXPERIMENTAL')),
     const SizedBox(height:18),
     Text('Morning everyone, I’m ${(notes[keyFor(0,0)]??'').trim().isEmpty ? '[COSS name not entered]' : notes[keyFor(0,0)]!.trim()}, your COSS today. I’ll run through the arrangements. You can ask questions during the briefing or at the end.'),
