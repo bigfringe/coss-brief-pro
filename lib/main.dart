@@ -8,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 // Keep compatibility with Flutter SDKs predating the Material package split.
 // ignore: deprecated_member_use
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show rootBundle, MethodChannel;
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(const CossApp());
@@ -549,10 +549,44 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
   ]);
   // Spoken presentation is deterministic and offline: every saved active item
   // appears verbatim, without AI inventing or dropping safety-critical details.
+  Future<void> enhanceBriefing() async {
+    final original = <String>[];
+    for (var i=0;i<headings.length;i++) {
+      for (var j=0;j<options[i].length;j++) {
+        final k=keyFor(i,j);
+        final v=(notes[k]??'').trim();
+        if (!crossed.contains(k)&&v.isNotEmpty) {
+          original.add('${headings[i]} — ${options[i][j]}: $v');
+        }
+      }
+    }
+    if(original.isEmpty)return;
+    final source=original.join('\n');
+    await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('Experimental AI wording assistant'),
+      content: SizedBox(width:600,child:FutureBuilder<String?>(
+        future:const MethodChannel('think_atlas/local_ai').invokeMethod<String>('enhance',{'text':source}),
+        builder:(context,snapshot){
+          if(snapshot.connectionState!=ConnectionState.done)return const Column(mainAxisSize:MainAxisSize.min,children:[CircularProgressIndicator(),Text('Preparing local AI — first use may download the model')]);
+          if(snapshot.hasError || snapshot.data==null)return const Text('Local AI unavailable. Your original briefing is unchanged.');
+          return SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            const Text('UNVERIFIED AI DRAFT — NOT AUTHORITY TO WORK',style:TextStyle(color:Colors.amber,fontWeight:FontWeight.bold)),
+            SelectableText(snapshot.data!),
+            const Divider(),
+            const Text('ORIGINAL RECORDED INFORMATION'),
+            SelectableText(source),
+            const Text('Check every detail. Only the original briefing remains in the app; AI output is not saved or approved.')
+          ]));
+        })),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('RETURN TO ORIGINAL'))],
+    ));
+  }
   Widget buildPreview()=>ListView(padding:const EdgeInsets.all(16),children:[
     const Text('COSS SAFETY BRIEFING – DRAFT',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
     const SizedBox(height:8),
     const Text('Demonstration / draft only. Check all details against the approved briefing and current site arrangements. Not authority to work.',style:TextStyle(color:Colors.amber)),
+    const SizedBox(height:12),
+    FilledButton.icon(onPressed:enhanceBriefing,style:FilledButton.styleFrom(backgroundColor:Colors.amber,foregroundColor:Colors.black),icon:const Icon(Icons.auto_awesome),label:const Text('AI ENHANCE BRIEFING — EXPERIMENTAL')),
     const SizedBox(height:18),
     Text('Morning everyone, I’m ${(notes[keyFor(0,0)]??'').trim().isEmpty ? '[COSS name not entered]' : notes[keyFor(0,0)]!.trim()}, your COSS today. I’ll run through the arrangements. You can ask questions during the briefing or at the end.'),
     ...List.generate(headings.length,(i){
