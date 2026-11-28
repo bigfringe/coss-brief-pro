@@ -720,7 +720,59 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
       actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('RETURN TO ORIGINAL'))],
     ));
   }
+  Widget _briefingDashboard() {
+    String value(int i, int j) {
+      final k = keyFor(i,j);
+      final v = (notes[k] ?? '').trim();
+      return crossed.contains(k) || v.isEmpty ? 'Not entered' : v;
+    }
+    Widget panel(Widget child) => Container(
+      margin: const EdgeInsets.only(bottom:12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors:[Color(0xff25221b),Color(0xff080808)]),
+        border: Border.all(color:const Color(0xffd9aa48),width:1.5),
+        borderRadius: BorderRadius.circular(18)),
+      child: child);
+    Widget field(String label,String data) => Padding(
+      padding:const EdgeInsets.symmetric(vertical:4),
+      child: Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Expanded(child:Text(label,style:const TextStyle(color:Colors.amber,fontWeight:FontWeight.bold))),
+        Expanded(flex:2,child:Text(data,style:const TextStyle(color:Colors.white))),
+      ]));
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      panel(const Column(children:[
+        Icon(Icons.train,color:Colors.amber,size:36),
+        Text('COSS BRIEFING',textAlign:TextAlign.center,style:TextStyle(color:Colors.amber,fontSize:30,fontWeight:FontWeight.w900)),
+        Text('COMPILED BRIEFING • DRAFT',style:TextStyle(color:Colors.white70)),
+      ])),
+      panel(const Wrap(alignment:WrapAlignment.spaceEvenly,spacing:12,runSpacing:8,children:[
+        Text('1  Compile',style:TextStyle(color:Colors.amber)),
+        Text('2  AI Enhance',style:TextStyle(color:Colors.amber)),
+        Text('3  Review',style:TextStyle(color:Colors.white70)),
+        Text('4  Deliver',style:TextStyle(color:Colors.white70)),
+      ])),
+      panel(Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        const Text('Compiled Briefing Summary',style:TextStyle(color:Colors.amber,fontSize:20,fontWeight:FontWeight.bold)),
+        const Divider(color:Colors.amber),
+        field('COSS',value(0,0)),
+        field('ELR',value(1,0)),
+        field('Start mileage',value(1,1)),
+        field('Finish mileage',value(1,2)),
+        field('Access / egress',value(1,3)),
+        field('Work activity',value(1,4)),
+        field('Protection limits',value(3,0)),
+      ])),
+      panel(const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text('✦  Enhance Your Briefing with AI',style:TextStyle(color:Colors.amber,fontSize:20,fontWeight:FontWeight.bold)),
+        SizedBox(height:8),
+        Text('Improve wording and flow. Compare every detail with the original before delivery.',style:TextStyle(color:Colors.white)),
+      ])),
+    ]);
+  }
+
   Widget buildPreview()=>ListView(padding:const EdgeInsets.all(16),children:[
+    _briefingDashboard(),
     const Text('COSS SAFETY BRIEFING – DRAFT',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
     const SizedBox(height:8),
     const Text('Demonstration / draft only. Check all details against the approved briefing and current site arrangements. Not authority to work.',style:TextStyle(color:Colors.amber)),
