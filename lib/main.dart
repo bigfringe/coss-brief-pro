@@ -700,12 +700,15 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
         SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'auto'),child:const Text('Automatic — local AI or offline')),
         SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'local'),child:const Text('Local AI — where supported')),
         SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'offline'),child:const Text('Offline briefing — no internet required')),
+        SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'short'),child:const Text('Short briefing — concise, offline')),
         const ListTile(enabled:false,title:Text('Online AI'),subtitle:Text('Not configured yet')),
       ]));
     if(!mounted || mode==null)return;
     final offline = 'Hello everyone. I’ll run through the recorded briefing arrangements.\n\n'+source+'\n\nPlease ask about anything that is unclear before work starts.';
-    var usedOffline = mode=='offline';
+    final shortBrief = original.join('\n');
+    var usedOffline = mode=='offline' || mode=='short';
     final enhancement = () async {
+      if(mode=='short')return shortBrief;
       if(mode=='offline')return offline;
       try {
         final result=await const MethodChannel('think_atlas/local_ai')
@@ -730,7 +733,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
               : 'Local AI unavailable on this device. Your original briefing is unchanged.');
           }
           return SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            Text(usedOffline?'OFFLINE BRIEFING — REVIEW REQUIRED':'UNVERIFIED AI DRAFT — NOT AUTHORITY TO WORK',style:const TextStyle(color:Colors.amber,fontWeight:FontWeight.bold)),
+            Text(mode=='short'?'SHORT BRIEFING — REVIEW REQUIRED':usedOffline?'OFFLINE BRIEFING — REVIEW REQUIRED':'UNVERIFIED AI DRAFT — NOT AUTHORITY TO WORK',style:const TextStyle(color:Colors.amber,fontWeight:FontWeight.bold)),
             SelectableText(snapshot.data!),
             const Divider(),
             const Text('ORIGINAL RECORDED INFORMATION'),
