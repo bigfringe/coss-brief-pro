@@ -700,7 +700,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
         SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'auto'),child:const Text('Automatic — local AI or offline')),
         SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'local'),child:const Text('Local AI — where supported')),
         SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'offline'),child:const Text('Offline briefing — no internet required')),
-        SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'short'),child:const Text('Short briefing — concise, offline')),
+        SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'short'),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Short briefing'),Text('As spoken',style:TextStyle(fontSize:12))])),
         const ListTile(enabled:false,title:Text('Online AI'),subtitle:Text('Not configured yet')),
       ]));
     if(!mounted || mode==null)return;
