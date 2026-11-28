@@ -694,27 +694,48 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     }
     if(original.isEmpty)return;
     final source=original.join('\n');
-    final enhancement = const MethodChannel('think_atlas/local_ai')
-        .invokeMethod<String>('enhance', {'text': source})
-        .timeout(const Duration(minutes: 2));
+    final mode = await showDialog<String>(context:context,builder:(ctx)=>SimpleDialog(
+      title:const Text('Choose briefing method'),
+      children:[
+        SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'auto'),child:const Text('Automatic — local AI or offline')),
+        SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'local'),child:const Text('Local AI — where supported')),
+        SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'offline'),child:const Text('Offline briefing — no internet required')),
+        const ListTile(enabled:false,title:Text('Online AI'),subtitle:Text('Not configured yet')),
+      ]));
+    if(!mounted || mode==null)return;
+    final offline = 'Hello everyone. I’ll run through the recorded briefing arrangements.\n\n'+source+'\n\nPlease ask about anything that is unclear before work starts.';
+    var usedOffline = mode=='offline';
+    final enhancement = () async {
+      if(mode=='offline')return offline;
+      try {
+        final result=await const MethodChannel('think_atlas/local_ai')
+          .invokeMethod<String>('enhance', {'text': source})
+          .timeout(const Duration(seconds:30));
+        if(result!=null && result.trim().isNotEmpty)return result;
+      } catch (_) {
+        // Unsupported devices and unavailable models use the original data.
+      }
+      usedOffline=true;
+      return offline;
+    }();
     await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
       title:Text(widget.trainingExample?'TRAINING EXAMPLE — AI wording':'Experimental AI wording assistant'),
       content: SizedBox(width:600,child:FutureBuilder<String?>(
         future:enhancement,
         builder:(context,snapshot){
-          if(snapshot.connectionState!=ConnectionState.done)return const Column(mainAxisSize:MainAxisSize.min,children:[CircularProgressIndicator(),Text('Preparing local AI — first use may download the model')]);
+          if(snapshot.connectionState!=ConnectionState.done)return const Column(mainAxisSize:MainAxisSize.min,children:[CircularProgressIndicator(),Text('Preparing briefing — offline fallback is available')]);
           if(snapshot.hasError || snapshot.data==null || snapshot.data!.trim().isEmpty) {
             return Text(snapshot.error is TimeoutException
               ? 'Local AI did not respond within two minutes. Return to the original briefing and try again later. The model may still be preparing.'
               : 'Local AI unavailable on this device. Your original briefing is unchanged.');
           }
           return SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            const Text('UNVERIFIED AI DRAFT — NOT AUTHORITY TO WORK',style:TextStyle(color:Colors.amber,fontWeight:FontWeight.bold)),
+            Text(usedOffline?'OFFLINE BRIEFING — REVIEW REQUIRED':'UNVERIFIED AI DRAFT — NOT AUTHORITY TO WORK',style:const TextStyle(color:Colors.amber,fontWeight:FontWeight.bold)),
             SelectableText(snapshot.data!),
             const Divider(),
             const Text('ORIGINAL RECORDED INFORMATION'),
             SelectableText(source),
-            const Text('Check every detail. Only the original briefing remains in the app; AI output is not saved or approved.')
+            const Text('Check every detail. Only the original briefing remains in the app; generated wording is not saved or approved.')
           ]));
         })),
       actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('RETURN TO ORIGINAL'))],
@@ -780,7 +801,7 @@ class _BriefingHomeState extends State<BriefingHome> with WidgetsBindingObserver
     if(widget.trainingExample) const Text('TRAINING EXAMPLE — NOT FOR OPERATIONAL USE',style:TextStyle(color:Colors.amber,fontWeight:FontWeight.bold)),
     if(!widget.trainingExample) FilledButton.icon(onPressed:archiveBriefing,icon:const Icon(Icons.save),label:const Text('SAVE BRIEFING')),
     const SizedBox(height:8),
-    FilledButton.icon(onPressed:enhanceBriefing,style:FilledButton.styleFrom(backgroundColor:Colors.amber,foregroundColor:Colors.black),icon:const Icon(Icons.auto_awesome),label:const Text('AI ENHANCE BRIEFING — EXPERIMENTAL')),
+    FilledButton.icon(onPressed:enhanceBriefing,style:FilledButton.styleFrom(backgroundColor:Colors.amber,foregroundColor:Colors.black),icon:const Icon(Icons.auto_awesome),label:const Text('GENERATE SMART BRIEFING')),
     const SizedBox(height:18),
     Text('Morning everyone, I’m ${(notes[keyFor(0,0)]??'').trim().isEmpty ? '[COSS name not entered]' : notes[keyFor(0,0)]!.trim()}, your COSS today. I’ll run through the arrangements. You can ask questions during the briefing or at the end.'),
     ...List.generate(headings.length,(i){
